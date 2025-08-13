@@ -85,15 +85,15 @@ export function GuideCard({ guide, onView }: GuideCardProps) {
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                 <span className="text-sm font-medium">{guide.rating}</span>
               </div>
-              <span className="text-sm text-gray-500">•</span>
-              <span className="text-sm text-gray-500">{guide.destination}</span>
-              <span className="text-sm text-gray-500">•</span>
-              <span className="text-sm text-gray-500">{guide.duration}</span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">{guide.destination}</span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">{guide.duration}</span>
             </div>
           </div>
 
           {/* Summary */}
-          <p className="text-sm text-gray-600 line-clamp-2">{guide.summary}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{guide.summary}</p>
 
           {/* Tags */}
           <div className="flex flex-wrap gap-1">
@@ -117,14 +117,14 @@ export function GuideCard({ guide, onView }: GuideCardProps) {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{guide.author.name}</p>
-              <p className="text-xs text-gray-500">{guide.author.level}</p>
+              <p className="text-xs text-muted-foreground">{guide.author.level}</p>
             </div>
-            <span className="text-xs text-gray-500">{formatDate(guide.createdAt)}</span>
+            <span className="text-xs text-muted-foreground">{formatDate(guide.createdAt)}</span>
           </div>
 
           {/* Stats and Actions */}
           <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Eye className="w-4 h-4" />
                 <span>{guide.views}</span>
@@ -140,7 +140,7 @@ export function GuideCard({ guide, onView }: GuideCardProps) {
                 variant="ghost"
                 size="sm"
                 onClick={handleLike}
-                className={`h-8 px-2 ${isLiked ? "text-red-500" : "text-gray-500"}`}
+                className={`h-8 px-2 ${isLiked ? "text-red-500" : "text-muted-foreground"}`}
               >
                 <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
                 <span className="ml-1 text-xs">{likes}</span>
@@ -149,11 +149,11 @@ export function GuideCard({ guide, onView }: GuideCardProps) {
                 variant="ghost"
                 size="sm"
                 onClick={handleSave}
-                className={`h-8 px-2 ${isSaved ? "text-blue-500" : "text-gray-500"}`}
+                className={`h-8 px-2 ${isSaved ? "text-blue-500" : "text-muted-foreground"}`}
               >
                 <Bookmark className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleShare} className="h-8 px-2 text-gray-500">
+              <Button variant="ghost" size="sm" onClick={handleShare} className="h-8 px-2 text-muted-foreground">
                 <Share2 className="w-4 h-4" />
               </Button>
             </div>

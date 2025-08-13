@@ -137,11 +137,11 @@ export function CurrencyConverter() {
           </div>
 
           {convertedAmount !== null && (
-            <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
-              <div className="text-3xl font-bold text-gray-900 mb-2">
+            <div className="text-center p-6 bg-secondary rounded-lg">
+              <div className="text-3xl font-bold text-foreground mb-2">
                 {getCurrencySymbol(toCurrency)} {convertedAmount.toFixed(2)}
               </div>
-              <div className="text-gray-600">
+              <div className="text-muted-foreground">
                 {getCurrencySymbol(fromCurrency)} {amount} {getCurrencyName(fromCurrency)} ={" "}
                 {getCurrencySymbol(toCurrency)} {convertedAmount.toFixed(2)} {getCurrencyName(toCurrency)}
               </div>
@@ -154,11 +154,11 @@ export function CurrencyConverter() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-semibold">当前汇率</h4>
-              <span className="text-xs text-gray-500">更新时间: {formatLastUpdated(rates[0].lastUpdated)}</span>
+              <span className="text-xs text-muted-foreground">更新时间: {formatLastUpdated(rates[0].lastUpdated)}</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {rates.map((rate) => (
-                <div key={rate.to} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={rate.to} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
                       {rate.from}/{rate.to}
@@ -166,7 +166,7 @@ export function CurrencyConverter() {
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">{rate.rate.toFixed(4)}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       1 {rate.from} = {rate.rate.toFixed(4)} {rate.to}
                     </div>
                   </div>

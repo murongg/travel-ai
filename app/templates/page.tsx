@@ -92,23 +92,23 @@ export default function TemplatesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
               攻略模板库
             </h1>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">选择适合您的旅行模板，快速生成个性化攻略</p>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">选择适合您的旅行模板，快速生成个性化攻略</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+                 <div className="aspect-video bg-muted rounded-t-lg"></div>
                 <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-3 bg-muted rounded w-full"></div>
                 </div>
               </div>
             ))}
@@ -119,21 +119,21 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             攻略模板库
           </h1>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">选择适合您的旅行模板，快速生成个性化攻略</p>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">选择适合您的旅行模板，快速生成个性化攻略</p>
           {error && <p className="text-orange-600 text-sm mt-2">{error}</p>}
         </div>
 
         {/* Search and Filter */}
         <div className="mb-8 space-y-4">
           <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="搜索模板..."
               value={searchQuery}
@@ -165,12 +165,12 @@ export default function TemplatesPage() {
         </div>
 
         {filteredTemplates.length === 0 && !isLoading && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
+            <div className="text-center py-12">
+              <div className="text-muted-foreground mb-4">
               <Filter className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">没有找到匹配的模板</h3>
-            <p className="text-gray-600">尝试调整搜索条件或选择其他分类</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">没有找到匹配的模板</h3>
+              <p className="text-muted-foreground">尝试调整搜索条件或选择其他分类</p>
           </div>
         )}
       </div>

@@ -113,7 +113,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -121,7 +121,7 @@ export default function CommunityPage() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
               攻略社区
             </h1>
-            <p className="text-gray-600">发现和分享精彩的旅行攻略</p>
+            <p className="text-muted-foreground">发现和分享精彩的旅行攻略</p>
           </div>
           <Button className="bg-gradient-to-r from-blue-600 to-purple-600">
             <Plus className="w-4 h-4 mr-2" />
@@ -133,7 +133,7 @@ export default function CommunityPage() {
         <div className="mb-8 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="搜索攻略..."
                 value={searchQuery}
@@ -185,12 +185,12 @@ export default function CommunityPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="aspect-video bg-gray-200 rounded-t-lg"></div>
+                <div className="aspect-video bg-muted rounded-t-lg"></div>
                 <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-full"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-3 bg-muted rounded w-full"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
                 </div>
               </div>
             ))}
@@ -213,11 +213,11 @@ export default function CommunityPage() {
 
         {!isLoading && !error && guides.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
+            <div className="text-muted-foreground mb-4">
               <Filter className="w-12 h-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">没有找到匹配的攻略</h3>
-            <p className="text-gray-600">尝试调整搜索条件或选择其他分类</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">没有找到匹配的攻略</h3>
+            <p className="text-muted-foreground">尝试调整搜索条件或选择其他分类</p>
           </div>
         )}
       </div>

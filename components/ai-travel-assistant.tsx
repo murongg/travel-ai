@@ -109,7 +109,7 @@ export function AITravelAssistant() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           AI 智能旅行助手
         </h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-muted-foreground max-w-2xl mx-auto">
           利用先进的AI技术，为您提供个性化的旅行规划、预算计算、行程优化、天气建议和文化指导
         </p>
       </div>
@@ -300,7 +300,7 @@ export function AITravelAssistant() {
               <CardDescription>详细计算旅行预算，包括各项费用明细</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">预算计算功能正在开发中...</p>
+              <p className="text-muted-foreground">预算计算功能正在开发中...</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -312,7 +312,7 @@ export function AITravelAssistant() {
               <CardDescription>根据目的地和旅行时间提供天气信息和着装建议</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">天气建议功能正在开发中...</p>
+              <p className="text-muted-foreground">天气建议功能正在开发中...</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -324,7 +324,7 @@ export function AITravelAssistant() {
               <CardDescription>提供目的地的文化习俗、礼仪和注意事项</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">文化指南功能正在开发中...</p>
+              <p className="text-muted-foreground">文化指南功能正在开发中...</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -344,7 +344,7 @@ export function AITravelAssistant() {
           </CardHeader>
           <CardContent>
             <div className="prose max-w-none">
-              <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg text-sm">
+              <pre className="whitespace-pre-wrap bg-muted p-4 rounded-lg text-sm">
                 {JSON.stringify(aiResponse.result, null, 2)}
               </pre>
             </div>

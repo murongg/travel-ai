@@ -2,6 +2,9 @@ import { aiModel } from "./common";
 import { TravelGuide, BudgetItem } from "@/lib/mock-data";
 import { XiaoHongShu } from "@/lib/api/xiaohongshu";
 import { ProgressManager } from "@/lib/progress-manager";
+import { amapServiceServer } from "@/lib/services/amap-service-server";
+import { TravelGuideService } from "@/lib/services/travel-guide-service";
+import { TravelGuide as SupabaseTravelGuide } from "@/lib/supabase";
 
 export interface TravelRequest {
   destination: string;
@@ -105,6 +108,67 @@ ${xiaohongshuInsights}
       await this.sleep(300); // 模拟整合时间
       progressManager.completeStep('finalize', travelGuide, '旅行指南生成完成！');
       
+      // 保存到数据库
+      progressManager.startStep('save-database', '正在保存到数据库...');
+      try {
+        // 转换类型以匹配数据库结构
+        const supabaseTravelGuide: SupabaseTravelGuide = {
+          prompt: prompt,
+          destination: travelGuide.destination,
+          duration: travelGuide.duration,
+          budget: travelGuide.budget,
+          overview: travelGuide.overview,
+          highlights: travelGuide.highlights,
+          tips: travelGuide.tips,
+          itinerary: travelGuide.itinerary.map(day => ({
+            day: day.day,
+            activities: day.activities.map(activity => ({
+              name: activity.name,
+              description: activity.description,
+              time: activity.time,
+              location: activity.location,
+              cost: parseFloat(activity.cost) || 0
+            })),
+            meals: day.meals.map(meal => ({
+              name: meal.name,
+              description: meal.description,
+              time: meal.type === 'breakfast' ? '08:00' : meal.type === 'lunch' ? '12:00' : '18:00',
+              location: meal.location,
+              cost: parseFloat(meal.cost) || 0
+            })),
+            accommodation: day.accommodation
+          })),
+          map_locations: (travelGuide.mapLocations || []).map(location => ({
+            name: location.name,
+            type: location.type,
+            day: location.day || 1,
+            description: location.description,
+            coordinates: location.coordinates
+          })),
+          budget_breakdown: (travelGuide.budgetBreakdown || []).map(item => ({
+            category: item.category,
+            amount: item.amount,
+            percentage: item.percentage,
+            color: item.color
+          })),
+          transportation: transportationMode || '未知',
+          user_id: undefined,
+          is_public: true
+        };
+        
+        const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(supabaseTravelGuide);
+        if (error) {
+          console.error('Error saving to database:', error);
+          progressManager.completeStep('save-database', null, '数据库保存失败，但旅行指南已生成');
+        } else {
+          console.log('Travel guide saved to database with ID:', savedGuide?.id);
+          progressManager.completeStep('save-database', savedGuide, '数据库保存成功');
+        }
+      } catch (dbError) {
+        console.error('Exception saving to database:', dbError);
+        progressManager.completeStep('save-database', null, '数据库保存异常，但旅行指南已生成');
+      }
+      
       return travelGuide;
       
     } catch (error) {
@@ -180,7 +244,66 @@ ${xiaohongshuInsights}
       const content = response.text || '生成旅行指南时出现错误，请稍后重试。';
       
       // 解析AI响应，构建TravelGuide对象
-      return await this.parseAIResponseToTravelGuide(content, prompt, xiaohongshuInsights, transportationMode);
+      const travelGuide = await this.parseAIResponseToTravelGuide(content, prompt, xiaohongshuInsights, transportationMode);
+      
+      // 保存到数据库
+      try {
+        // 转换类型以匹配数据库结构
+        const supabaseTravelGuide: SupabaseTravelGuide = {
+          prompt: prompt,
+          destination: travelGuide.destination,
+          duration: travelGuide.duration,
+          budget: travelGuide.budget,
+          overview: travelGuide.overview,
+          highlights: travelGuide.highlights,
+          tips: travelGuide.tips,
+          itinerary: travelGuide.itinerary.map(day => ({
+            day: day.day,
+            activities: day.activities.map(activity => ({
+              name: activity.name,
+              description: activity.description,
+              time: activity.time,
+              location: activity.location,
+              cost: parseFloat(activity.cost) || 0
+            })),
+            meals: day.meals.map(meal => ({
+              name: meal.name,
+              description: meal.description,
+              time: meal.type === 'breakfast' ? '08:00' : meal.type === 'lunch' ? '12:00' : '18:00',
+              location: meal.location,
+              cost: parseFloat(meal.cost) || 0
+            })),
+            accommodation: day.accommodation
+          })),
+          map_locations: (travelGuide.mapLocations || []).map(location => ({
+            name: location.name,
+            type: location.type,
+            day: location.day || 1,
+            description: location.description,
+            coordinates: location.coordinates
+          })),
+          budget_breakdown: (travelGuide.budgetBreakdown || []).map(item => ({
+            category: item.category,
+            amount: item.amount,
+            percentage: item.percentage,
+            color: item.color
+          })),
+          transportation: transportationMode || '未知',
+          user_id: undefined,
+          is_public: true
+        };
+        
+        const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(supabaseTravelGuide);
+        if (error) {
+          console.error('Error saving to database:', error);
+        } else {
+          console.log('Travel guide saved to database with ID:', savedGuide?.id);
+        }
+      } catch (dbError) {
+        console.error('Exception saving to database:', dbError);
+      }
+      
+      return travelGuide;
       
     } catch (error) {
       console.error('Error generating travel guide from prompt:', error);
@@ -542,8 +665,7 @@ ${notesContent}
       "name": "地点名称（不超过15字）",
       "type": "attraction|restaurant|hotel",
       "description": "专业推荐理由（不超过40字）",
-      "day": 1,
-      "coordinates": [经度, 纬度] // 可选，如果知道精确坐标请提供
+      "day": 1
     }
   ]
 }
@@ -553,12 +675,7 @@ ${notesContent}
 - 推荐餐厅(restaurant)：2-3个精选美食  
 - 住宿推荐(hotel)：1-2个优质选择
 
-坐标说明：
-- 如果知道地点的精确坐标，请提供[经度, 纬度]格式
-- 如果不确定坐标，可以不提供coordinates字段
-- 坐标将用于在地图上精确标记位置
-
-只返回JSON格式，确保专业性和准确性。`;
+注意：只需要提供地点名称，坐标将自动获取。只返回JSON格式，确保专业性和准确性。`;
 
       const response = await aiModel.doGenerate({
         inputFormat: 'prompt',
@@ -568,36 +685,66 @@ ${notesContent}
       });
 
       const aiResponse = response.text || '';
-      return this.parseJSONLocationsResponse(aiResponse);
+      const locations = await this.parseJSONLocationsResponse(aiResponse, destination);
+      return locations;
       
     } catch (error) {
       console.error('Error generating important locations:', error);
-      return this.generateBasicLocations(destination);
+      return await this.generateBasicLocations(destination);
     }
   }
 
-  private parseJSONLocationsResponse(aiResponse: string): any[] {
+  private async parseJSONLocationsResponse(aiResponse: string, destination: string): Promise<any[]> {
     try {
       // 尝试解析JSON响应
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsedData = JSON.parse(jsonMatch[0]);
         if (parsedData.locations && Array.isArray(parsedData.locations)) {
-          return parsedData.locations;
+          // 为每个地点自动获取坐标
+          const locationsWithCoordinates = await this.enrichLocationsWithCoordinates(parsedData.locations, destination);
+          return locationsWithCoordinates;
         }
       }
       
       console.warn('Failed to parse JSON locations, using fallback');
-      return this.generateBasicLocations("未知目的地");
+      return await this.generateBasicLocations(destination);
       
     } catch (error) {
       console.error('Error parsing JSON locations:', error);
-      return this.generateBasicLocations("未知目的地");
+      return await this.generateBasicLocations(destination);
     }
   }
 
-  private generateBasicLocations(destination: string): any[] {
-    return [
+  private async enrichLocationsWithCoordinates(locations: any[], destination: string): Promise<any[]> {
+    const enrichedLocations = [];
+    
+    for (const location of locations) {
+      const enrichedLocation = { ...location };
+      
+      // 如果没有坐标，尝试通过地理编码获取
+      if (!location.coordinates) {
+        try {
+          const result = await amapServiceServer.smartGeocode(location.name, destination);
+          if (result && result.coordinates) {
+            enrichedLocation.coordinates = result.coordinates;
+            console.log(`成功获取 ${location.name} 的坐标:`, result.coordinates);
+          } else {
+            console.warn(`无法获取 ${location.name} 的坐标`);
+          }
+        } catch (error) {
+          console.error(`获取 ${location.name} 坐标失败:`, error);
+        }
+      }
+      
+      enrichedLocations.push(enrichedLocation);
+    }
+    
+    return enrichedLocations;
+  }
+
+  private async generateBasicLocations(destination: string): Promise<any[]> {
+    const basicLocations = [
       {
         name: `${destination}核心景区`,
         type: "attraction",
@@ -617,6 +764,9 @@ ${notesContent}
         day: 1
       }
     ];
+
+    // 为基础地点也尝试获取坐标
+    return await this.enrichLocationsWithCoordinates(basicLocations, destination);
   }
 
   private async generateBudgetBreakdown(budget: string, destination: string, duration: string, originalPrompt: string): Promise<any[]> {

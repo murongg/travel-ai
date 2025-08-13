@@ -116,10 +116,10 @@ export function GuideActions({ guideId, title }: GuideActionsProps) {
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button key={star} onClick={() => setRating(star)} className="p-1">
-                  <Star className={`h-6 w-6 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                  <Star className={`h-6 w-6 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 </button>
               ))}
-              <span className="ml-2 text-sm text-gray-600">{rating > 0 && `${rating}/5 星`}</span>
+              <span className="ml-2 text-sm text-muted-foreground">{rating > 0 && `${rating}/5 星`}</span>
             </div>
 
             {/* Feedback Text */}

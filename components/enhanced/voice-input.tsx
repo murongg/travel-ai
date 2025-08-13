@@ -75,9 +75,9 @@ export function VoiceInput({
 
   if (!isSupported) {
     return (
-      <Card className="border-gray-200">
+      <Card>
         <CardContent className="p-4">
-          <div className="text-center text-gray-500">
+          <div className="text-center text-muted-foreground">
             <MicOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">您的浏览器不支持语音识别功能</p>
             <p className="text-xs mt-1">请使用Chrome、Edge或Safari浏览器</p>
@@ -88,7 +88,7 @@ export function VoiceInput({
   }
 
   return (
-    <Card className={`border-2 transition-colors ${isRecording ? "border-red-300 bg-red-50" : "border-gray-200"}`}>
+    <Card className={`border-2 transition-colors ${isRecording ? "border-destructive/40 bg-destructive/10" : ""}`}>
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
           <Button
@@ -120,11 +120,11 @@ export function VoiceInput({
 
             <div className="text-sm">
               {transcript ? (
-                <div className="p-2 bg-gray-50 rounded border">
-                  <p className="text-gray-900">{transcript}</p>
+                <div className="p-2 bg-muted rounded border">
+                  <p className="text-foreground">{transcript}</p>
                 </div>
               ) : (
-                <p className="text-gray-500">{placeholder}</p>
+                <p className="text-muted-foreground">{placeholder}</p>
               )}
             </div>
 
@@ -145,7 +145,7 @@ export function VoiceInput({
 
         {/* Usage Tips */}
         {!transcript && !isRecording && (
-          <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+          <div className="mt-3 p-2 bg-secondary rounded text-xs text-muted-foreground">
             <p>💡 语音输入提示：</p>
             <ul className="mt-1 space-y-1">
               <li>• 点击麦克风按钮开始录音</li>

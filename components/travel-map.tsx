@@ -1,9 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Navigation, Loader2 } from "lucide-react"
-import { Map, Marker } from 'react-amap'
 import { useEffect, useState } from 'react'
 import { amapService, LocationResult } from '@/lib/services/amap-service'
+import dynamic from 'next/dynamic';
+
+// 动态导入地图组件以避免SSR问题
+const Map = dynamic(() => import('@uiw/react-amap').then(mod => mod.Map), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full">地图加载中...</div>
+});
+const Marker = dynamic(() => import('@uiw/react-amap').then(mod => mod.Marker), { 
+  ssr: false 
+});
+const APILoader = dynamic(() => import('@uiw/react-amap').then(mod => mod.APILoader), { 
+  ssr: false 
+});
 
 interface MapLocation {
   name: string
@@ -23,9 +35,12 @@ interface EnhancedMapLocation extends MapLocation {
   geocodingStatus?: 'pending' | 'success' | 'failed';
 }
 
+
+
 export function TravelMap({ locations, destination }: TravelMapProps) {
   const [enhancedLocations, setEnhancedLocations] = useState<EnhancedMapLocation[]>([]);
   const [mapCenter, setMapCenter] = useState<[number, number]>([116.397428, 39.90923]);
+  const [mapZoom, setMapZoom] = useState<number>(12);
   const [isGeocoding, setIsGeocoding] = useState(true);
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -36,7 +51,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
       case "hotel":
         return "bg-purple-100 text-purple-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -71,7 +86,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
     }
   }
 
-  // 地理编码处理
+  // 处理地点坐标（现在由AI接口直接提供）
   useEffect(() => {
     const processLocations = async () => {
       if (!locations.length) {
@@ -82,45 +97,55 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
       setIsGeocoding(true);
       
       try {
-        // 1. 获取目的地中心坐标
+        // 1. 计算地图中心点坐标
+        let centerCoordinates = mapCenter;
+        const locationsWithCoords = locations.filter(loc => loc.coordinates);
+        
+        // 直接获取目标城市的中心坐标作为地图中心
         const cityCenter = await amapService.getCityCenter(destination);
         if (cityCenter) {
-          setMapCenter(cityCenter);
+          centerCoordinates = cityCenter;
+          console.log('使用城市中心作为地图中心:', cityCenter);
+          
+          // 根据地点数量智能设置缩放级别
+          let zoom = 12; // 默认缩放级别
+          if (locationsWithCoords.length > 10) zoom = 10;      // 很多地点，缩小视野
+          else if (locationsWithCoords.length > 5) zoom = 11;  // 较多地点
+          else if (locationsWithCoords.length > 2) zoom = 12;  // 中等数量
+          else zoom = 13;                                       // 少量地点，放大视野
+          
+          setMapZoom(zoom);
+          
+          console.log('地图中心设置完成:', {
+            目标城市: destination,
+            城市中心坐标: centerCoordinates,
+            地点数量: locationsWithCoords.length,
+            智能缩放级别: zoom
+          });
+        } else {
+          console.warn(`无法获取城市中心坐标: ${destination}`);
         }
-
-        // 2. 处理地点坐标
-        const enhanced: EnhancedMapLocation[] = [];
         
-        for (const location of locations) {
-          const enhancedLocation: EnhancedMapLocation = {
-            ...location,
-            geocodingStatus: 'pending'
-          };
+        // 更新地图中心点
+        setMapCenter(centerCoordinates);
 
-          // 如果已有坐标，直接使用
-          if (location.coordinates) {
-            enhancedLocation.resolvedCoordinates = location.coordinates;
-            enhancedLocation.geocodingStatus = 'success';
-          } else {
-            // 尝试地理编码获取坐标
-            try {
-              const result = await amapService.smartGeocode(location.name, destination);
-              if (result) {
-                enhancedLocation.resolvedCoordinates = result.coordinates;
-                enhancedLocation.geocodingStatus = 'success';
-              } else {
-                enhancedLocation.geocodingStatus = 'failed';
-              }
-            } catch (error) {
-              console.error(`地理编码失败: ${location.name}`, error);
-              enhancedLocation.geocodingStatus = 'failed';
-            }
-          }
-
-          enhanced.push(enhancedLocation);
-        }
+        // 2. 直接使用AI提供的坐标
+        const enhanced: EnhancedMapLocation[] = locations.map(location => ({
+          ...location,
+          geocodingStatus: location.coordinates ? 'success' : 'failed' as const,
+          resolvedCoordinates: location.coordinates
+        }));
 
         setEnhancedLocations(enhanced);
+        
+        // 调试信息
+        console.log('TravelMap处理结果:', {
+          totalLocations: enhanced.length,
+          locationsWithCoords: enhanced.filter(l => l.resolvedCoordinates).length,
+          mapCenter: centerCoordinates,
+          enhanced: enhanced
+        });
+        
       } catch (error) {
         console.error('地图处理失败:', error);
       } finally {
@@ -135,98 +160,87 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Navigation className="h-5 w-5 text-blue-600" />
+          <Navigation className="h-5 w-5 text-primary" />
           行程地图
         </CardTitle>
       </CardHeader>
       <CardContent>
         {/* 高德地图 */}
-        <div className="rounded-lg overflow-hidden mb-4 border border-gray-200" style={{ height: '320px' }}>
+        <div className="rounded-lg overflow-hidden mb-4 border" style={{ height: '320px' }}>
           {isGeocoding ? (
-            <div className="bg-gray-100 h-full flex items-center justify-center">
-              <div className="text-center text-gray-500">
+            <div className="bg-muted h-full flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
                 <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
                 <p className="text-sm">正在解析地点坐标...</p>
               </div>
             </div>
           ) : (
-            <Map
-              amapkey={process.env.NEXT_PUBLIC_AMAP_KEY || 'your_amap_key_here'}
-              version="2.0"
-              center={mapCenter}
-              zoom={12}
-            >
-              {enhancedLocations
-                .filter(location => location.resolvedCoordinates)
-                .map((location, index) => (
-                  <Marker
-                    key={index}
-                    position={location.resolvedCoordinates!}
-                    title={location.name}
-                    render={() => (
-                      <div className="relative">
-                        <div 
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white ${
-                            location.type === 'attraction' 
-                              ? 'bg-blue-500' 
-                              : location.type === 'restaurant' 
-                              ? 'bg-red-500' 
-                              : 'bg-green-500'
-                          }`}
-                        >
-                          {location.type === 'attraction' 
-                            ? '景' 
-                            : location.type === 'restaurant' 
-                            ? '餐' 
-                            : '住'}
-                        </div>
-                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-4 border-transparent border-t-current" 
-                             style={{ 
-                               color: location.type === 'attraction' 
-                                 ? '#3b82f6' 
-                                 : location.type === 'restaurant' 
-                                 ? '#ef4444' 
-                                 : '#22c55e'
-                             }}>
-                        </div>
-                      </div>
-                    )}
-                  />
-                ))}
-            </Map>
+            <div className="relative h-full">
+              <APILoader akey={process.env.NEXT_PUBLIC_AMAP_KEY || 'placeholder_key_for_react_amap'}>
+                <Map style={{ height: '100%' }}
+                >
+                {enhancedLocations
+                  .filter(location => location.resolvedCoordinates)
+                  .map((location, index) => {
+                    console.log(`渲染Marker ${index}:`, location.name, location.resolvedCoordinates);
+                    
+                    // 确保坐标格式正确
+                    if (!location.resolvedCoordinates || !Array.isArray(location.resolvedCoordinates) || location.resolvedCoordinates.length !== 2) {
+                      console.warn(`无效的坐标数据 ${index}:`, location.resolvedCoordinates);
+                      return null;
+                    }
+                    
+                    const position: [number, number] = [location.resolvedCoordinates[0], location.resolvedCoordinates[1]];
+                    console.log(`Marker位置 ${index}:`, position);
+                    
+                    return (
+                      <Marker
+                        key={`marker-${index}`}
+                        // offset={new AMap.Pixel(-12, -12)}
+                      >
+                        {getTypeIcon(location.type)}
+                      </Marker>
+                    );
+                  })}
+                </Map>
+              </APILoader>
+              
+              {/* API密钥提示 */}
+              {(!process.env.NEXT_PUBLIC_AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_KEY === 'placeholder_key_for_react_amap') && (
+                <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-xs">
+                  ⚠️ 需要配置真实的高德地图API密钥才能显示地图和标记
+                </div>
+              )}
+            </div>
           )}
         </div>
 
         {/* Location list */}
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-sm text-gray-700">重要地点</h4>
-            <div className="text-xs text-gray-500">
-              {enhancedLocations.filter(l => l.geocodingStatus === 'success').length}/{enhancedLocations.length} 已定位
+            <h4 className="font-medium text-sm text-foreground">重要地点</h4>
+            <div className="text-xs text-muted-foreground">
+              {enhancedLocations.filter(l => l.resolvedCoordinates).length}/{enhancedLocations.length} 已定位
             </div>
           </div>
           {enhancedLocations.map((location, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">{getTypeIcon(location.type)}</div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{location.name}</span>
-                    {location.geocodingStatus === 'pending' && (
-                      <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-                    )}
-                    {location.geocodingStatus === 'success' && (
+                    {location.resolvedCoordinates ? (
                       <MapPin className="h-3 w-3 text-green-500" />
-                    )}
-                    {location.geocodingStatus === 'failed' && (
-                      <MapPin className="h-3 w-3 text-red-400" />
+                    ) : (
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
                     )}
                   </div>
                   {location.description && (
-                    <p className="text-xs text-gray-600 mt-1">{location.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{location.description}</p>
                   )}
                   {location.resolvedCoordinates && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       坐标: {location.resolvedCoordinates[0].toFixed(6)}, {location.resolvedCoordinates[1].toFixed(6)}
                     </p>
                   )}
@@ -246,8 +260,8 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
 
         {/* 地图图例 */}
         {enhancedLocations.length > 0 && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-800 text-sm mb-3">
+          <div className="mt-4 p-3 bg-muted rounded-lg border">
+            <div className="flex items-center gap-2 text-foreground text-sm mb-3">
               <MapPin className="h-4 w-4" />
               <span className="font-medium">图例</span>
             </div>
@@ -256,43 +270,59 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
                 <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
                   景
                 </div>
-                <span className="text-gray-600">景点</span>
+                <span className="text-muted-foreground">景点</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xs">
                   餐
                 </div>
-                <span className="text-gray-600">餐厅</span>
+                <span className="text-muted-foreground">餐厅</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xs">
                   住
                 </div>
-                <span className="text-gray-600">酒店</span>
+                <span className="text-muted-foreground">酒店</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* 地理编码统计 */}
+        {/* 地图统计 */}
         {enhancedLocations.length > 0 && (
-          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center gap-2 text-blue-800 text-sm mb-2">
+          <div className="mt-3 p-3 bg-secondary rounded-lg border">
+            <div className="flex items-center gap-2 text-foreground text-sm mb-2">
               <MapPin className="h-4 w-4" />
               <span className="font-medium">地图信息</span>
             </div>
-            <div className="text-xs text-blue-700 space-y-1">
+            <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
-                <span>目的地中心:</span>
+                <span>目的地:</span>
                 <span>{destination}</span>
               </div>
               <div className="flex justify-between">
-                <span>成功定位:</span>
-                <span>{enhancedLocations.filter(l => l.geocodingStatus === 'success').length} 个地点</span>
+                <span>已定位地点:</span>
+                <span>{enhancedLocations.filter(l => l.resolvedCoordinates).length} 个</span>
               </div>
               <div className="flex justify-between">
-                <span>定位失败:</span>
-                <span>{enhancedLocations.filter(l => l.geocodingStatus === 'failed').length} 个地点</span>
+                <span>总地点数:</span>
+                <span>{enhancedLocations.length} 个</span>
+              </div>
+              <div className="flex justify-between">
+                <span>城市中心:</span>
+                <span>{mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>缩放级别:</span>
+                <span>{mapZoom}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>中心来源:</span>
+                <span>高德地图城市API</span>
+              </div>
+              <div className="flex justify-between">
+                <span>数据来源:</span>
+                <span>AI智能生成</span>
               </div>
             </div>
           </div>

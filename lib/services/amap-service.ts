@@ -42,14 +42,9 @@ export interface LocationResult {
 }
 
 export class AmapService {
-  private apiKey: string;
-  private baseUrl = 'https://restapi.amap.com/v3';
-
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.NEXT_PUBLIC_AMAP_KEY || '';
-    if (!this.apiKey) {
-      console.warn('高德地图API密钥未配置，地理编码功能将不可用');
-    }
+  constructor() {
+    // 前端服务只负责调用后端API，不需要并发控制
+    // 后端已经有速率控制了
   }
 
   /**
@@ -59,34 +54,28 @@ export class AmapService {
    * @returns 坐标和地址信息
    */
   async geocoding(address: string, city?: string): Promise<LocationResult | null> {
-    if (!this.apiKey) {
-      throw new Error('高德地图API密钥未配置');
-    }
-
     try {
-      const params = new URLSearchParams({
-        key: this.apiKey,
-        address: address,
-        output: 'json',
-        ...(city && { city: city }),
+      const response = await fetch('/api/amap/geocoding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          address,
+          city,
+        }),
       });
 
-      const response = await fetch(`${this.baseUrl}/geocode/geo?${params}`);
-      const data: AmapApiResponse = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
-        const geocode = data.geocodes[0];
-        const [lng, lat] = geocode.location.split(',').map(Number);
-
-        return {
-          address: address,
-          coordinates: [lng, lat],
-          city: geocode.city,
-          district: geocode.district,
-          formatted_address: geocode.formatted_address,
-        };
+      const data = await response.json();
+      
+      if (data.success && data.result) {
+        return data.result;
       } else {
-        console.warn(`地理编码失败: ${address}`, data);
+        console.warn(`地理编码失败: ${address}`, data.error);
         return null;
       }
     } catch (error) {
@@ -102,13 +91,34 @@ export class AmapService {
    * @returns 坐标结果数组
    */
   async batchGeocoding(addresses: string[], city?: string): Promise<(LocationResult | null)[]> {
-    const results = await Promise.allSettled(
-      addresses.map(address => this.geocoding(address, city))
-    );
+    try {
+      const response = await fetch('/api/amap/geocoding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          addresses,
+          city,
+        }),
+      });
 
-    return results.map(result => 
-      result.status === 'fulfilled' ? result.value : null
-    );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.results) {
+        return data.results;
+      } else {
+        console.warn(`批量地理编码失败`, data.error);
+        return addresses.map(() => null);
+      }
+    } catch (error) {
+      console.error('批量地理编码请求失败:', error);
+      return addresses.map(() => null);
+    }
   }
 
   /**

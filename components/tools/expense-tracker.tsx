@@ -150,9 +150,9 @@ export function ExpenseTracker() {
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="h-4 bg-muted rounded w-2/3"></div>
           </div>
         </CardContent>
       </Card>
@@ -171,17 +171,17 @@ export function ExpenseTracker() {
       <CardContent className="space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
+          <div className="text-center p-4 bg-secondary rounded-lg">
             <div className="text-2xl font-bold text-blue-600">¥{getTotalBudget().toFixed(2)}</div>
-            <div className="text-sm text-gray-600">总预算</div>
+            <div className="text-sm text-muted-foreground">总预算</div>
           </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
+          <div className="text-center p-4 bg-secondary rounded-lg">
             <div className="text-2xl font-bold text-green-600">¥{getTotalSpent().toFixed(2)}</div>
-            <div className="text-sm text-gray-600">已花费</div>
+            <div className="text-sm text-muted-foreground">已花费</div>
           </div>
-          <div className="text-center p-4 bg-orange-50 rounded-lg">
+          <div className="text-center p-4 bg-secondary rounded-lg">
             <div className="text-2xl font-bold text-orange-600">¥{(getTotalBudget() - getTotalSpent()).toFixed(2)}</div>
-            <div className="text-sm text-gray-600">剩余预算</div>
+            <div className="text-sm text-muted-foreground">剩余预算</div>
           </div>
         </div>
 
@@ -310,7 +310,7 @@ export function ExpenseTracker() {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{category}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         ¥{status.actual.toFixed(2)} / ¥{status.budget.planned.toFixed(2)}
                       </span>
                       {status.isOverBudget ? (
@@ -326,8 +326,8 @@ export function ExpenseTracker() {
                       )}
                     </div>
                   </div>
-                  <Progress value={status.percentage} className={`h-2 ${status.isOverBudget ? "bg-red-100" : ""}`} />
-                  <div className="text-xs text-gray-500">
+                  <Progress value={status.percentage} className="h-2" />
+                  <div className="text-xs text-muted-foreground">
                     {status.isOverBudget
                       ? `超支 ¥${Math.abs(status.remaining).toFixed(2)}`
                       : `剩余 ¥${status.remaining.toFixed(2)}`}
@@ -347,10 +347,10 @@ export function ExpenseTracker() {
                 .slice(-10)
                 .reverse()
                 .map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={expense.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <div className="font-medium">{expense.description}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {expense.category} • {expense.location} • {expense.date.toLocaleDateString()}
                       </div>
                     </div>

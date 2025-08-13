@@ -61,14 +61,14 @@ export function CommentSection({ guideId }: CommentSectionProps) {
     return (
       <div className="space-y-4">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-3">
-                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                <div className="w-8 h-8 bg-muted rounded-full"></div>
                 <div className="flex-1">
-                  <div className="h-3 bg-gray-200 rounded w-1/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/4 mb-2"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
                 </div>
               </div>
             ))}
@@ -108,19 +108,19 @@ export function CommentSection({ guideId }: CommentSectionProps) {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-medium text-sm">{comment.author.name}</span>
-                <span className="text-xs text-gray-500">{formatDate(comment.createdAt)}</span>
+                <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
               </div>
-              <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+              <p className="text-sm text-foreground mb-2">{comment.content}</p>
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-6 px-2 text-xs ${comment.isLiked ? "text-red-500" : "text-gray-500"}`}
+                  className={`h-6 px-2 text-xs ${comment.isLiked ? "text-red-500" : "text-muted-foreground"}`}
                 >
                   <Heart className={`w-3 h-3 mr-1 ${comment.isLiked ? "fill-current" : ""}`} />
                   {comment.likes}
                 </Button>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-gray-500">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground">
                   <MessageCircle className="w-3 h-3 mr-1" />
                   回复
                 </Button>
@@ -131,7 +131,7 @@ export function CommentSection({ guideId }: CommentSectionProps) {
       </div>
 
       {comments.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted-foreground">
           <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>还没有评论，来发表第一个评论吧！</p>
         </div>

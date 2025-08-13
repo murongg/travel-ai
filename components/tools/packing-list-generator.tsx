@@ -165,7 +165,7 @@ export function PackingListGenerator() {
               {groupedItems &&
                 Object.entries(groupedItems).map(([category, items]) => (
                   <div key={category} className="space-y-2">
-                    <h4 className="font-medium text-sm text-gray-700 uppercase tracking-wide">
+                    <h4 className="font-medium text-sm text-foreground uppercase tracking-wide">
                       {categoryNames[category] || category}
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -173,7 +173,7 @@ export function PackingListGenerator() {
                         <div
                           key={item.id}
                           className={`flex items-center space-x-2 p-2 rounded border ${
-                            item.packed ? "bg-green-50 border-green-200" : "bg-white"
+                            item.packed ? "bg-secondary" : "bg-card"
                           }`}
                         >
                           <Checkbox
@@ -184,7 +184,7 @@ export function PackingListGenerator() {
                           <label
                             htmlFor={item.id}
                             className={`flex-1 text-sm cursor-pointer ${
-                              item.packed ? "line-through text-gray-500" : ""
+                              item.packed ? "line-through text-muted-foreground" : ""
                             }`}
                           >
                             {item.name}

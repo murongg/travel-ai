@@ -92,13 +92,13 @@ export function OfflineManager() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Storage Info */}
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-muted rounded-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">存储使用情况</span>
-            <span className="text-sm text-gray-600">{formatSize(totalSize)}</span>
+            <span className="text-sm text-muted-foreground">{formatSize(totalSize)}</span>
           </div>
           <Progress value={Math.min((totalSize / (10 * 1024 * 1024)) * 100, 100)} className="h-2" />
-          <div className="text-xs text-gray-500 mt-1">已使用 {formatSize(totalSize)} / 10 MB</div>
+          <div className="text-xs text-muted-foreground mt-1">已使用 {formatSize(totalSize)} / 10 MB</div>
         </div>
 
         {/* Offline Status */}
@@ -117,7 +117,7 @@ export function OfflineManager() {
           <h3 className="font-semibold">已下载的攻略 ({offlineGuides.length})</h3>
 
           {offlineGuides.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>还没有下载任何攻略</p>
               <p className="text-sm">在攻略页面点击下载按钮即可离线保存</p>
@@ -125,10 +125,10 @@ export function OfflineManager() {
           ) : (
             <div className="space-y-3">
               {offlineGuides.map((guide) => (
-                <div key={guide.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                <div key={guide.id} className="flex items-center justify-between p-3 bg-card border rounded-lg">
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium truncate">{guide.title}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                       <span>下载时间: {formatDate(guide.downloadedAt)}</span>
                       <span>大小: {formatSize(guide.size)}</span>
                     </div>
@@ -148,9 +148,9 @@ export function OfflineManager() {
         </div>
 
         {/* Tips */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-800 mb-2">离线使用提示</h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="p-4 bg-secondary border rounded-lg">
+          <h4 className="font-medium mb-2">离线使用提示</h4>
+          <ul className="text-sm text-muted-foreground space-y-1">
             <li>• 在有网络时下载攻略，离线时也能查看完整内容</li>
             <li>• 定期清理不需要的离线攻略以节省存储空间</li>
             <li>• 离线模式下无法生成新攻略或同步最新数据</li>

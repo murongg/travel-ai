@@ -206,7 +206,7 @@ export function ARNavigation() {
           <CardDescription>增强现实导航功能</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>您的设备不支持AR导航功能</p>
             <p className="text-sm mt-1">需要摄像头和位置权限</p>
@@ -242,12 +242,12 @@ export function ARNavigation() {
               <div className="space-y-2">
                 <h4 className="font-medium">附近地点</h4>
                 {locations.map((location) => (
-                  <div key={location.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div key={location.id} className="flex items-center justify-between p-2 bg-muted rounded">
                     <div className="flex items-center gap-2">
                       {getLocationIcon(location.type)}
                       <span className="text-sm font-medium">{location.name}</span>
                     </div>
-                    <div className="text-sm text-gray-600">{location.distance}km</div>
+                    <div className="text-sm text-muted-foreground">{location.distance}km</div>
                   </div>
                 ))}
               </div>
@@ -269,7 +269,7 @@ export function ARNavigation() {
               </Button>
             </div>
 
-            <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+            <div className="p-3 bg-secondary rounded-lg text-sm text-muted-foreground">
               <p>💡 使用提示：</p>
               <ul className="mt-1 space-y-1">
                 <li>• 将摄像头对准周围环境</li>

@@ -33,12 +33,12 @@ export function WeatherWidget() {
       case "晴天":
         return <Sun className="w-6 h-6 text-yellow-500" />
       case "多云":
-        return <Cloud className="w-6 h-6 text-gray-500" />
+        return <Cloud className="w-6 h-6 text-muted-foreground" />
       case "小雨":
       case "雨天":
         return <CloudRain className="w-6 h-6 text-blue-500" />
       default:
-        return <Cloud className="w-6 h-6 text-gray-500" />
+        return <Cloud className="w-6 h-6 text-muted-foreground" />
     }
   }
 
@@ -76,21 +76,21 @@ export function WeatherWidget() {
         {weather && (
           <div className="space-y-6">
             {/* Current Weather */}
-            <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg">
+            <div className="text-center p-6 bg-secondary rounded-lg">
               <h3 className="text-xl font-semibold mb-2">{weather.location}</h3>
               <div className="flex items-center justify-center gap-4 mb-4">
                 {getWeatherIcon(weather.current.condition)}
                 <div className="text-4xl font-bold">{weather.current.temperature}°C</div>
               </div>
-              <div className="text-lg text-gray-600 mb-4">{weather.current.condition}</div>
+              <div className="text-lg text-muted-foreground mb-4">{weather.current.condition}</div>
 
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center justify-center gap-1">
                   <Droplets className="w-4 h-4 text-blue-500" />
                   <span>{weather.current.humidity}%</span>
                 </div>
-                <div className="flex items-center justify-center gap-1">
-                  <Wind className="w-4 h-4 text-gray-500" />
+                  <div className="flex items-center justify-center gap-1">
+                    <Wind className="w-4 h-4 text-muted-foreground" />
                   <span>{weather.current.windSpeed}km/h</span>
                 </div>
                 <div className="flex items-center justify-center gap-1">
@@ -105,16 +105,16 @@ export function WeatherWidget() {
               <h4 className="font-semibold">7天预报</h4>
               <div className="grid grid-cols-1 gap-2">
                 {weather.forecast.map((day, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium w-16">{index === 0 ? "今天" : formatDate(day.date)}</span>
                       {getWeatherIcon(day.condition)}
-                      <span className="text-sm text-gray-600">{day.condition}</span>
+                      <span className="text-sm text-muted-foreground">{day.condition}</span>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-sm">
                         <span className="font-medium">{day.high}°</span>
-                        <span className="text-gray-500 ml-1">{day.low}°</span>
+                        <span className="text-muted-foreground ml-1">{day.low}°</span>
                       </div>
                       <Badge variant="outline" className="text-xs">
                         {day.precipitation}%
@@ -126,9 +126,9 @@ export function WeatherWidget() {
             </div>
 
             {/* Travel Tips */}
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h4 className="font-semibold text-yellow-800 mb-2">出行建议</h4>
-              <ul className="text-sm text-yellow-700 space-y-1">
+            <div className="p-4 bg-secondary border rounded-lg">
+              <h4 className="font-semibold mb-2">出行建议</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
                 {weather.current.temperature > 25 && <li>• 天气较热，建议穿着轻便透气的衣物，携带防晒用品</li>}
                 {weather.current.temperature < 10 && <li>• 天气较冷，建议穿着保暖衣物，注意防寒</li>}
                 {weather.forecast.some((day) => day.precipitation > 60) && <li>• 未来几天可能有降雨，建议携带雨具</li>}

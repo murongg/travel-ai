@@ -145,7 +145,7 @@ export default function ResultPage() {
   // 如果正在从prompt生成，显示进度跟踪
   if (isGeneratingFromPrompt || (isProgressLoading && !guide)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
@@ -160,8 +160,8 @@ export default function ResultPage() {
                 返回首页
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">正在生成您的专属旅行指南</h1>
-                <p className="text-gray-600">请稍候，AI正在为您精心规划...</p>
+                <h1 className="text-2xl font-bold text-foreground">正在生成您的专属旅行指南</h1>
+                <p className="text-muted-foreground">请稍候，AI正在为您精心规划...</p>
               </div>
             </div>
 
@@ -205,10 +205,10 @@ export default function ResultPage() {
 
   if (!guide) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="text-6xl mb-4">😔</div>
-          <p className="text-lg text-gray-600 mb-4">攻略生成失败，请重试</p>
+          <p className="text-lg text-muted-foreground mb-4">攻略生成失败，请重试</p>
           <Button onClick={() => router.push("/")} className="hover:scale-105 transition-transform">
             返回首页
           </Button>
@@ -229,16 +229,16 @@ export default function ResultPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-background animate-in fade-in duration-500">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10 transition-all duration-300">
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10 transition-all duration-300">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/")}
-              className="hover:bg-blue-50 transition-colors duration-300 hover:scale-105"
+              className="hover:bg-secondary transition-colors duration-300 hover:scale-105"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               返回首页
@@ -333,10 +333,10 @@ export default function ResultPage() {
                         {day.activities.map((activity, actIndex) => (
                           <div
                             key={actIndex}
-                            className="border-l-2 border-gray-200 pl-4 pb-3 hover:border-blue-300 transition-colors group"
+                            className="border-l-2 border pl-4 pb-3 hover:border-blue-300 transition-colors group"
                           >
                             <div className="flex items-start gap-3">
-                              <Clock className="h-4 w-4 text-gray-500 mt-1 group-hover:text-blue-500 transition-colors" />
+                              <Clock className="h-4 w-4 text-muted-foreground mt-1 group-hover:text-blue-500 transition-colors" />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="text-sm font-medium text-blue-600">{activity.time}</span>
@@ -347,8 +347,8 @@ export default function ResultPage() {
                                     {activity.cost}
                                   </Badge>
                                 </div>
-                                <p className="text-sm text-gray-600 mb-1 leading-relaxed">{activity.description}</p>
-                                <div className="flex items-center gap-4 text-xs text-gray-500">
+                                <p className="text-sm text-muted-foreground mb-1 leading-relaxed">{activity.description}</p>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                   <span>📍 {activity.location}</span>
                                   <span>⏱️ {activity.duration}</span>
                                 </div>
@@ -380,8 +380,8 @@ export default function ResultPage() {
                                     {meal.cost}
                                   </Badge>
                                 </div>
-                                <p className="text-sm text-gray-600 mb-1 leading-relaxed">{meal.description}</p>
-                                <span className="text-xs text-gray-500">📍 {meal.location}</span>
+                                <p className="text-sm text-muted-foreground mb-1 leading-relaxed">{meal.description}</p>
+                                <span className="text-xs text-muted-foreground">📍 {meal.location}</span>
                               </div>
                             </div>
                           </div>

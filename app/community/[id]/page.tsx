@@ -94,15 +94,15 @@ export default function GuideDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="aspect-video bg-gray-200 rounded-lg mb-8"></div>
+            <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
+            <div className="aspect-video bg-muted rounded-lg mb-8"></div>
             <div className="space-y-4">
-              <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-6 bg-muted rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+              <div className="h-4 bg-muted rounded w-full"></div>
             </div>
           </div>
         </div>
@@ -112,13 +112,13 @@ export default function GuideDetailPage() {
 
   if (error || !guide) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               {error === "攻略不存在" ? "攻略不存在" : "加载失败"}
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-muted-foreground mb-8">
               {error === "攻略不存在" ? "您访问的攻略可能已被删除或不存在" : "无法加载攻略内容，请稍后重试"}
             </p>
             <div className="space-x-4">
@@ -136,7 +136,7 @@ export default function GuideDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
@@ -158,9 +158,9 @@ export default function GuideDetailPage() {
 
             {/* Title and Meta */}
             <div className="space-y-4">
-              <h1 className="text-3xl font-bold text-gray-900">{guide.title}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{guide.title}</h1>
 
-              <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-medium">{guide.rating}</span>
@@ -190,18 +190,18 @@ export default function GuideDetailPage() {
 
             {/* Content */}
             <div className="prose max-w-none">
-              <p className="text-lg text-gray-700 leading-relaxed">{guide.summary}</p>
+              <p className="text-lg text-foreground leading-relaxed">{guide.summary}</p>
               {/* In a real app, this would be the full guide content */}
-              <div className="mt-8 p-6 bg-white rounded-lg border">
+              <div className="mt-8 p-6 bg-card rounded-lg border">
                 <h3 className="text-xl font-semibold mb-4">详细行程</h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   这里会显示完整的攻略内容，包括详细的行程安排、景点介绍、美食推荐、住宿建议等信息...
                 </p>
               </div>
             </div>
 
             {/* Comments */}
-            <div className="bg-white rounded-lg p-6 border">
+            <div className="bg-card rounded-lg p-6 border">
               <CommentSection guideId={guide.id} />
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function GuideDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Author Card */}
-            <div className="bg-white rounded-lg p-6 border">
+            <div className="bg-card rounded-lg p-6 border">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar className="w-12 h-12">
                   <AvatarImage
@@ -220,7 +220,7 @@ export default function GuideDetailPage() {
                 </Avatar>
                 <div>
                   <h3 className="font-semibold">{guide.author.name}</h3>
-                  <p className="text-sm text-gray-600">{guide.author.level}</p>
+                  <p className="text-sm text-muted-foreground">{guide.author.level}</p>
                 </div>
               </div>
               <Button variant="outline" className="w-full bg-transparent">
@@ -229,7 +229,7 @@ export default function GuideDetailPage() {
             </div>
 
             {/* Actions */}
-            <div className="bg-white rounded-lg p-6 border">
+            <div className="bg-card rounded-lg p-6 border">
               <h3 className="font-semibold mb-4">操作</h3>
               <div className="space-y-3">
                 <Button variant={isLiked ? "default" : "outline"} className="w-full justify-start" onClick={handleLike}>
@@ -248,23 +248,23 @@ export default function GuideDetailPage() {
             </div>
 
             {/* Stats */}
-            <div className="bg-white rounded-lg p-6 border">
+            <div className="bg-card rounded-lg p-6 border">
               <h3 className="font-semibold mb-4">统计信息</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">浏览量</span>
+                  <span className="text-muted-foreground">浏览量</span>
                   <span className="font-medium">{guide.views}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">点赞数</span>
+                  <span className="text-muted-foreground">点赞数</span>
                   <span className="font-medium">{guide.likes}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">评论数</span>
+                  <span className="text-muted-foreground">评论数</span>
                   <span className="font-medium">{guide.comments}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">发布时间</span>
+                  <span className="text-muted-foreground">发布时间</span>
                   <span className="font-medium">{formatDate(guide.createdAt)}</span>
                 </div>
               </div>

@@ -21,7 +21,7 @@ export function TemplateCard({ template, onUse }: TemplateCardProps) {
       case "hard":
         return "bg-red-100 text-red-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-muted text-foreground"
     }
   }
 
@@ -58,7 +58,7 @@ export function TemplateCard({ template, onUse }: TemplateCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>{template.duration}</span>
@@ -88,7 +88,7 @@ export function TemplateCard({ template, onUse }: TemplateCardProps) {
 
           <div className="space-y-2">
             <h4 className="font-medium text-sm">特色功能：</h4>
-            <ul className="text-xs text-gray-600 space-y-1">
+            <ul className="text-xs text-muted-foreground space-y-1">
               {template.features.slice(0, 2).map((feature) => (
                 <li key={feature} className="flex items-center gap-1">
                   <div className="w-1 h-1 bg-blue-500 rounded-full" />

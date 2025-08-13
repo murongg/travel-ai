@@ -27,7 +27,7 @@ export function BudgetBreakdown({ totalBudget, breakdown }: BudgetBreakdownProps
       <CardContent className="space-y-4">
         <div className="text-center">
           <div className="text-2xl font-bold text-green-600">{totalBudget}</div>
-          <div className="text-sm text-gray-500">总预算</div>
+          <div className="text-sm text-muted-foreground">总预算</div>
         </div>
 
         <div className="space-y-3">
@@ -35,7 +35,7 @@ export function BudgetBreakdown({ totalBudget, breakdown }: BudgetBreakdownProps
             <div key={index} className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">{item.category}</span>
-                <span className="text-sm text-gray-600">¥{item.amount}</span>
+                <span className="text-sm text-muted-foreground">¥{item.amount}</span>
               </div>
               <Progress
                 value={item.percentage}
@@ -46,7 +46,7 @@ export function BudgetBreakdown({ totalBudget, breakdown }: BudgetBreakdownProps
                   } as React.CSSProperties
                 }
               />
-              <div className="text-xs text-gray-500 text-right">{item.percentage}%</div>
+              <div className="text-xs text-muted-foreground text-right">{item.percentage}%</div>
             </div>
           ))}
         </div>

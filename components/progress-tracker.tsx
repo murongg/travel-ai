@@ -22,7 +22,7 @@ export function ProgressTracker({ progressState, className = '' }: ProgressTrack
       case 'error':
         return <AlertCircle className="w-5 h-5 text-red-500" />;
       default:
-        return <Circle className="w-5 h-5 text-gray-300" />;
+        return <Circle className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -80,12 +80,12 @@ export function ProgressTracker({ progressState, className = '' }: ProgressTrack
               key={step.id}
               className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                 step.status === 'in_progress' 
-                  ? 'bg-blue-50 border border-blue-200' 
+                  ? 'bg-secondary border' 
                   : step.status === 'completed'
-                  ? 'bg-green-50 border border-green-200'
+                  ? 'bg-secondary border'
                   : step.status === 'error'
-                  ? 'bg-red-50 border border-red-200'
-                  : 'bg-gray-50'
+                  ? 'bg-destructive/10 border border-destructive'
+                  : 'bg-muted'
               }`}
             >
               <div className="flex-shrink-0">
@@ -94,14 +94,14 @@ export function ProgressTracker({ progressState, className = '' }: ProgressTrack
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                  <h4 className="text-sm font-medium text-foreground truncate">
                     {step.name}
                   </h4>
                   {getStepBadge(step)}
                 </div>
                 
                 {step.message && (
-                  <p className="text-sm text-gray-600 mt-1">{step.message}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{step.message}</p>
                 )}
                 
                 {step.status === 'in_progress' && step.progress > 0 && (
@@ -111,10 +111,10 @@ export function ProgressTracker({ progressState, className = '' }: ProgressTrack
                 )}
                 
                 {step.error && (
-                  <p className="text-sm text-red-600 mt-1">{step.error}</p>
+                  <p className="text-sm text-destructive mt-1">{step.error}</p>
                 )}
                 
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                   {step.startTime && (
                     <span>开始: {formatTime(step.startTime)}</span>
                   )}
@@ -207,6 +207,7 @@ export function useProgressTracking() {
                   setProgressState(data.data);
                   break;
                 case 'complete':
+                  console.log('进度跟踪完成，设置结果:', data.data.travelGuide);
                   setProgressState(data.data.progress);
                   setResult(data.data.travelGuide);
                   setIsLoading(false);
