@@ -29,26 +29,24 @@ export function WeatherWidget() {
   }
 
   const getWeatherIcon = (condition: string) => {
-    switch (condition) {
-      case "晴天":
-        return <Sun className="w-6 h-6 text-yellow-500" />
-      case "多云":
-        return <Cloud className="w-6 h-6 text-muted-foreground" />
-      case "小雨":
-      case "雨天":
-        return <CloudRain className="w-6 h-6 text-blue-500" />
-      default:
-        return <Cloud className="w-6 h-6 text-muted-foreground" />
+    if (!condition) return <Cloud className="w-6 h-6 text-muted-foreground" />
+    
+    if (condition.includes('晴')) {
+      return <Sun className="w-6 h-6 text-yellow-500" />
+    } else if (condition.includes('多云') || condition.includes('阴')) {
+      return <Cloud className="w-6 h-6 text-muted-foreground" />
+    } else if (condition.includes('雨') || condition.includes('阵雨')) {
+      return <CloudRain className="w-6 h-6 text-blue-500" />
+    } else if (condition.includes('雪')) {
+      return <CloudRain className="w-6 h-6 text-blue-300" />
+    } else if (condition.includes('雾') || condition.includes('霾')) {
+      return <Cloud className="w-6 h-6 text-gray-400" />
+    } else {
+      return <Cloud className="w-6 h-6 text-muted-foreground" />
     }
   }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("zh-CN", {
-      month: "short",
-      day: "numeric",
-      weekday: "short",
-    }).format(date)
-  }
+
 
   return (
     <Card>
@@ -89,35 +87,43 @@ export function WeatherWidget() {
                   <Droplets className="w-4 h-4 text-blue-500" />
                   <span>{weather.current.humidity}%</span>
                 </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <Wind className="w-4 h-4 text-muted-foreground" />
-                  <span>{weather.current.windSpeed}km/h</span>
+                <div className="flex items-center justify-center gap-1">
+                  <Wind className="w-4 h-4 text-muted-foreground" />
+                  <span>{weather.current.windSpeed}级</span>
                 </div>
                 <div className="flex items-center justify-center gap-1">
                   <Eye className="w-4 h-4 text-green-500" />
-                  <span>良好</span>
+                  <span>{weather.current.windDirection}</span>
                 </div>
               </div>
+              {weather.current.reportTime && (
+                <div className="text-xs text-muted-foreground mt-2">
+                  更新时间：{weather.current.reportTime}
+                </div>
+              )}
             </div>
 
-            {/* 7-Day Forecast */}
+            {/* 3-Day Forecast */}
             <div className="space-y-3">
-              <h4 className="font-semibold">7天预报</h4>
+              <h4 className="font-semibold">3天预报</h4>
               <div className="grid grid-cols-1 gap-2">
                 {weather.forecast.map((day, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium w-16">{index === 0 ? "今天" : formatDate(day.date)}</span>
-                      {getWeatherIcon(day.condition)}
-                      <span className="text-sm text-muted-foreground">{day.condition}</span>
+                      <span className="text-sm font-medium w-16">{day.date}</span>
+                      {getWeatherIcon(day.dayWeather)}
+                      <div className="text-sm text-muted-foreground">
+                        <div>{day.dayWeather}</div>
+                        <div className="text-xs">转{day.nightWeather}</div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-sm">
-                        <span className="font-medium">{day.high}°</span>
-                        <span className="text-muted-foreground ml-1">{day.low}°</span>
+                        <span className="font-medium">{day.dayTemp}°</span>
+                        <span className="text-muted-foreground ml-1">~{day.nightTemp}°</span>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {day.precipitation}%
+                        {day.dayWind}
                       </Badge>
                     </div>
                   </div>
@@ -125,15 +131,12 @@ export function WeatherWidget() {
               </div>
             </div>
 
-            {/* Travel Tips */}
+            {/* Weather Advice */}
             <div className="p-4 bg-secondary border rounded-lg">
-              <h4 className="font-semibold mb-2">出行建议</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                {weather.current.temperature > 25 && <li>• 天气较热，建议穿着轻便透气的衣物，携带防晒用品</li>}
-                {weather.current.temperature < 10 && <li>• 天气较冷，建议穿着保暖衣物，注意防寒</li>}
-                {weather.forecast.some((day) => day.precipitation > 60) && <li>• 未来几天可能有降雨，建议携带雨具</li>}
-                {weather.current.windSpeed > 15 && <li>• 风力较大，户外活动请注意安全</li>}
-              </ul>
+              <h4 className="font-semibold mb-2">天气建议</h4>
+              <div className="text-sm text-muted-foreground whitespace-pre-line">
+                {weather.advice}
+              </div>
             </div>
           </div>
         )}

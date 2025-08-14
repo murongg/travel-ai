@@ -11,12 +11,13 @@ import { BudgetBreakdown } from "@/components/budget-breakdown"
 import { TravelMap } from "@/components/travel-map"
 import { GuideActions } from "@/components/guide-actions"
 import { LoadingSkeleton } from "@/components/loading-skeleton"
-import { SupabaseTravelGuide } from "@/lib/supabase"
+import { FirebaseTravelGuide } from "@/lib/firebase"
+import { WeatherDestination } from "@/components/weather-destination"
 
 export default function ResultPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [guide, setGuide] = useState<SupabaseTravelGuide | null>(null)
+  const [guide, setGuide] = useState<FirebaseTravelGuide | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
 
@@ -97,25 +98,7 @@ export default function ResultPage() {
       }
       const { data } = await response.json()
 
-      // Normalize DB shape (snake_case, jsonb) to UI shape used here
-      const normalizeGuideFromDb = (db: any): any => {
-        return {
-          id: db.id,
-          title: db.title || `${db.destination || ''} 旅行指南`,
-          destination: db.destination,
-          duration: db.duration,
-          budget: db.budget,
-          overview: db.overview,
-          highlights: db.highlights || [],
-          tips: db.tips || [],
-          itinerary: db.itinerary || [],
-          map_locations: db.map_locations || [],
-          budget_breakdown: db.budget_breakdown || [],
-          createdAt: db.created_at,
-        }
-      }
-
-      setGuide(normalizeGuideFromDb(data))
+      setGuide(data)
     } catch (error) {
       console.error("Error fetching guide:", error)
     } finally {
@@ -385,6 +368,11 @@ export default function ResultPage() {
             </div>
 
             <div className="space-y-6">
+              {/* Weather Information */}
+              <div className="animate-in slide-in-from-right-4 duration-700 delay-100">
+                <WeatherDestination destination={guide.destination} itinerary={guide.itinerary} weatherInfo={guide.weather_info} />
+              </div>
+
               {/* Budget Breakdown */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-300">
                 <BudgetBreakdown totalBudget={guide.budget} breakdown={budget_breakdown} />

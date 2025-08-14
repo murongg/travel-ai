@@ -1,45 +1,44 @@
-import { supabase, SupabaseTravelGuide, isSupabaseConfigured } from '@/lib/supabase'
-import { getSupabaseAdminClient, isSupabaseAdminConfigured } from '@/lib/supabase-admin'
+import { FirebaseTravelGuide, isFirebaseConfigured } from '@/lib/firebase'
+import { getFirebaseAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase-admin'
+
+// 工具函数：清理数据，移除 undefined 值
+function cleanFirestoreData(data: any): any {
+  return Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  )
+}
 
 export class TravelGuideService {
   // 创建新的旅行指南
-  static async createTravelGuide(travelGuide: SupabaseTravelGuide): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async createTravelGuide(travelGuide: FirebaseTravelGuide): Promise<{ data: FirebaseTravelGuide | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      // 优先使用服务端管理员客户端以绕过RLS
-      const admin = getSupabaseAdminClient()
-      if (admin) {
-        const { data, error } = await admin
-          .from('travel_guides')
-          .insert([travelGuide])
-          .select()
-          .single()
-
-        if (error) {
-          console.error('Error creating travel guide (admin):', error)
-          return { data: null, error }
+      // 使用服务端管理员客户端
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
         }
-
-        return { data: data as unknown as SupabaseTravelGuide, error: null }
       }
 
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .insert([travelGuide])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error creating travel guide:', error)
-        return { data: null, error }
-      }
-
+      // 过滤掉 undefined 值，避免 Firestore 错误
+      const cleanData = cleanFirestoreData(travelGuide)
+      
+      const docRef = await adminDb.collection('travel_guides').add({
+        ...cleanData,
+        created_at: new Date()
+      })
+      
+      const docSnap = await docRef.get()
+      const data = { id: docRef.id, ...docSnap.data() } as FirebaseTravelGuide
+      
       return { data, error: null }
     } catch (error) {
       console.error('Exception creating travel guide:', error)
@@ -48,26 +47,31 @@ export class TravelGuideService {
   }
 
   // 根据ID获取旅行指南
-  static async getTravelGuideById(id: string): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async getTravelGuideById(id: string): Promise<{ data: FirebaseTravelGuide | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) {
-        console.error('Error fetching travel guide:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
 
+      const docRef = adminDb.collection('travel_guides').doc(id)
+      const docSnap = await docRef.get()
+
+      if (!docSnap.exists) {
+        return { data: null, error: { message: 'Travel guide not found' } }
+      }
+
+      const data = { id: docSnap.id, ...docSnap.data() } as FirebaseTravelGuide
       return { data, error: null }
     } catch (error) {
       console.error('Exception fetching travel guide:', error)
@@ -76,28 +80,37 @@ export class TravelGuideService {
   }
 
   // 根据提示词获取旅行指南
-  static async getTravelGuideByPrompt(prompt: string): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async getTravelGuideByPrompt(prompt: string): Promise<{ data: FirebaseTravelGuide | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .select('*')
-        .eq('prompt', prompt)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (error) {
-        console.error('Error fetching travel guide by prompt:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
 
+      const querySnapshot = await adminDb
+        .collection('travel_guides')
+        .where('prompt', '==', prompt)
+        .orderBy('created_at', 'desc')
+        .limit(1)
+        .get()
+      
+      if (querySnapshot.empty) {
+        return { data: null, error: { message: 'No travel guide found with this prompt' } }
+      }
+
+      const docSnap = querySnapshot.docs[0]
+      const data = { id: docSnap.id, ...docSnap.data() } as FirebaseTravelGuide
+      
       return { data, error: null }
     } catch (error) {
       console.error('Exception fetching travel guide by prompt:', error)
@@ -106,25 +119,33 @@ export class TravelGuideService {
   }
 
   // 获取所有公开的旅行指南
-  static async getPublicTravelGuides(): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async getPublicTravelGuides(): Promise<{ data: FirebaseTravelGuide[] | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching public travel guides:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
+
+      const querySnapshot = await adminDb
+        .collection('travel_guides')
+        .where('is_public', '==', true)
+        .orderBy('created_at', 'desc')
+        .get()
+      
+      const data = querySnapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirebaseTravelGuide[]
 
       return { data, error: null }
     } catch (error) {
@@ -134,25 +155,35 @@ export class TravelGuideService {
   }
 
   // 根据目的地搜索旅行指南
-  static async searchTravelGuidesByDestination(destination: string): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async searchTravelGuidesByDestination(destination: string): Promise<{ data: FirebaseTravelGuide[] | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .select('*')
-        .ilike('destination', `%${destination}%`)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error searching travel guides by destination:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
+
+      // Firebase不支持原生文本搜索，这里使用简单的相等匹配
+      // 在生产环境中，建议使用Algolia等搜索服务
+      const querySnapshot = await adminDb
+        .collection('travel_guides')
+        .where('destination', '==', destination)
+        .orderBy('created_at', 'desc')
+        .get()
+      
+      const data = querySnapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirebaseTravelGuide[]
 
       return { data, error: null }
     } catch (error) {
@@ -162,26 +193,32 @@ export class TravelGuideService {
   }
 
   // 更新旅行指南
-  static async updateTravelGuide(id: string, updates: Partial<SupabaseTravelGuide>): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async updateTravelGuide(id: string, updates: Partial<FirebaseTravelGuide>): Promise<{ data: FirebaseTravelGuide | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating travel guide:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
+
+      // 过滤掉 undefined 值，避免 Firestore 错误
+      const cleanUpdates = cleanFirestoreData(updates)
+      
+      const docRef = adminDb.collection('travel_guides').doc(id)
+      await docRef.update(cleanUpdates)
+
+      // 获取更新后的文档
+      const docSnap = await docRef.get()
+      const data = { id: docSnap.id, ...docSnap.data() } as FirebaseTravelGuide
 
       return { data, error: null }
     } catch (error) {
@@ -192,22 +229,22 @@ export class TravelGuideService {
 
   // 删除旅行指南
   static async deleteTravelGuide(id: string): Promise<{ error: any }> {
-    if (!isSupabaseConfigured()) {
+    if (!isFirebaseConfigured()) {
       return { 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { error } = await supabase
-        .from('travel_guides')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error deleting travel guide:', error)
-        return { error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
+
+      const docRef = adminDb.collection('travel_guides').doc(id)
+      await docRef.delete()
 
       return { error: null }
     } catch (error) {
@@ -217,25 +254,33 @@ export class TravelGuideService {
   }
 
   // 获取用户的旅行指南
-  static async getUserTravelGuides(userId: string): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
-    if (!isSupabaseConfigured()) {
+  static async getUserTravelGuides(userId: string): Promise<{ data: FirebaseTravelGuide[] | null; error: any }> {
+    if (!isFirebaseConfigured()) {
       return { 
         data: null, 
-        error: { message: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.' } 
+        error: { message: 'Firebase not configured. Please set Firebase environment variables.' } 
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('travel_guides')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching user travel guides:', error)
-        return { data: null, error }
+      const adminDb = getFirebaseAdminDb()
+      if (!adminDb) {
+        return { 
+          data: null, 
+          error: { message: 'Firebase admin not available. Please check server configuration.' } 
+        }
       }
+
+      const querySnapshot = await adminDb
+        .collection('travel_guides')
+        .where('user_id', '==', userId)
+        .orderBy('created_at', 'desc')
+        .get()
+      
+      const data = querySnapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FirebaseTravelGuide[]
 
       return { data, error: null }
     } catch (error) {

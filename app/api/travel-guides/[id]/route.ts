@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TravelGuideService } from '@/lib/services/travel-guide-service'
-import { SupabaseTravelGuide } from '@/lib/supabase'
+import { FirebaseTravelGuide } from '@/lib/firebase'
 
 export async function GET(
   request: NextRequest,
@@ -40,7 +40,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const updates: Partial<SupabaseTravelGuide> = body
+    const updates: Partial<FirebaseTravelGuide> = body
     const { id } = await ctx.params
     const { data, error } = await TravelGuideService.updateTravelGuide(id, updates)
     

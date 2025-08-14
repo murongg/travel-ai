@@ -4,7 +4,7 @@ import { XiaoHongShu } from "@/lib/api/xiaohongshu";
 import { ProgressManager } from "@/lib/progress-manager";
 import { amapServiceServer } from "@/lib/services/amap-service-server";
 import { TravelGuideService } from "@/lib/services/travel-guide-service";
-import { SupabaseTravelGuide } from "@/lib/supabase";
+import { FirebaseTravelGuide } from "@/lib/firebase";
 
 export interface TravelRequest {
   destination: string;
@@ -40,10 +40,13 @@ export class TravelAgent {
       const userBudget = await this.extractBudgetFromPrompt(prompt);
       progressManager.completeStep('extract-keyword', keyword, `提取关键词：${keyword}，预算信息：${userBudget || '未指定'}`);
 
-      // 步骤3: 获取小红书相关内容分析
-      progressManager.startStep('fetch-insights', '正在联网搜索...');
-      const xiaohongshuInsights = await this.getXiaohongshuInsights(keyword);
-      progressManager.completeStep('fetch-insights', xiaohongshuInsights, '联网搜索完成');
+      // 步骤3: 获取小红书相关内容分析和天气信息
+      progressManager.startStep('fetch-insights', '正在联网搜索和获取天气信息...');
+      const [xiaohongshuInsights, weatherInfo] = await Promise.all([
+        this.getXiaohongshuInsights(keyword),
+        this.getWeatherInfoForDestination(prompt)
+      ]);
+      progressManager.completeStep('fetch-insights', xiaohongshuInsights, '联网搜索和天气信息获取完成');
 
       // 步骤4: 结合小红书数据和交通方式生成增强的旅行指南
       progressManager.startStep('generate-basic', '正在生成基础旅行信息...');
@@ -56,18 +59,21 @@ ${userBudget ? `用户预算：${userBudget}` : '用户预算：未指定'}
 小红书真实用户经验分析：
 ${xiaohongshuInsights}
 
-请结合用户需求、预算信息和小红书真实经验，以JSON格式返回专业分析：
+目的地天气信息：
+${JSON.stringify(weatherInfo)}
+
+请结合用户需求、预算信息、小红书真实经验和天气情况，以JSON格式返回专业分析：
 {
   "destination": "目的地城市名称（如：北京、上海、东京、巴黎等，不超过20个字）",
   "duration": "X天Y夜",
   "budget": "${userBudget ? `基于用户预算${userBudget}的优化建议（不超过20个字）` : '基于真实经验的预算建议（不超过20个字）'}",
   "overview": "结合真实用户经验和预算考虑的专业概述（不超过100字）",
   "highlights": ["结合小红书的亮点1（不超过30字）", "亮点2", "亮点3", "亮点4", "亮点5", "亮点6"],
-  "tips": ["基于真实用户经验和预算考虑的专业建议1（不超过30字）", "建议2", "建议3", "建议4", "建议5", "建议6"]
+  "tips": ["基于真实用户经验、预算考虑和天气情况的专业建议1（不超过30字）", "建议2", "建议3", "建议4", "建议5", "建议6"]
 }
 
-请重点结合小红书用户的真实经验、用户的交通偏好和预算考虑，提供专业和准确建议。
-专业交通建议（请结合预算考虑）：
+请重点结合小红书用户的真实经验、用户的交通偏好、预算考虑和天气情况，提供专业和准确建议。
+专业交通建议（请结合预算和天气考虑）：
 - 自驾游：推荐自驾友好景点、停车便利地点、最佳自驾路线，考虑油费、停车费、过路费等成本
 - 公共交通：优选地铁/公交便利景点、交通枢纽住宿、换乘优化，控制交通成本
 - 骑行：推荐骑行友好路线、自行车租赁点、骑行安全提示，考虑租赁费用
@@ -104,7 +110,7 @@ ${xiaohongshuInsights}
       progressManager.completeStep('generate-basic', content, '基础信息生成完成');
 
       // 解析AI响应，构建TravelGuide对象
-      const travelGuide = await this.parseAIResponseToTravelGuideWithProgress(content, prompt, xiaohongshuInsights, transportationMode, progressManager, userBudget);
+      const travelGuide = await this.parseAIResponseToTravelGuideWithProgress(content, prompt, xiaohongshuInsights, transportationMode, progressManager, userBudget, weatherInfo);
 
       progressManager.startStep('finalize', '正在整合旅行指南...');
       await this.sleep(300); // 模拟整合时间
@@ -114,7 +120,7 @@ ${xiaohongshuInsights}
       progressManager.startStep('save-database', '正在保存到数据库...');
       try {
         // 转换类型以匹配数据库结构
-        const supabaseTravelGuide: SupabaseTravelGuide = {
+        const firebaseTravelGuide: FirebaseTravelGuide = {
           prompt: prompt,
           destination: travelGuide.destination,
           duration: travelGuide.duration,
@@ -128,10 +134,11 @@ ${xiaohongshuInsights}
           transportation: transportationMode || '未知',
           user_id: undefined,
           is_public: true,
-          title: travelGuide.title
+          title: travelGuide.title,
+          weather_info: travelGuide.weather_info,
         };
 
-        const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(supabaseTravelGuide);
+        const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(firebaseTravelGuide);
         if (error) {
           console.error('Error saving to database:', error);
           progressManager.completeStep('save-database', null, '数据库保存失败，但旅行指南已生成');
@@ -153,7 +160,7 @@ ${xiaohongshuInsights}
   }
 
 
-  private async parseAIResponseToTravelGuideWithProgress(content: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string, progressManager?: ProgressManager, userBudget?: string | null): Promise<TravelGuide> {
+  private async parseAIResponseToTravelGuideWithProgress(content: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string, progressManager?: ProgressManager, userBudget?: string | null, weatherInfo?: any): Promise<TravelGuide> {
     try {
       // 尝试解析JSON响应，使用更健壮的方法
       let jsonString = '';
@@ -178,6 +185,7 @@ ${xiaohongshuInsights}
           map_locations: [],
           budget_breakdown: [],
           tips: Array.isArray(parsedData.tips) ? parsedData.tips.map((t: string) => this.truncateText(t, 30)) : ['出行前请仔细检查签证要求和有效期', '建议购买合适的旅行保险保障安全', '密切关注当地天气变化情况'],
+          weather_info: weatherInfo || undefined,
         };
 
         // 异步生成其他组件
@@ -228,6 +236,21 @@ ${xiaohongshuInsights}
         map_locations: await this.generateImportantLocations("待分析", prompt),
         budget_breakdown: await this.generateBudgetBreakdown("待确认预算", "待分析", "5天4夜", prompt),
         tips: ['出行前请仔细检查签证要求', '建议购买合适的旅行保险', '密切关注当地天气变化'],
+        weather_info: {
+          current: {
+            temperature: '',
+            condition: '',
+            humidity: '',
+            windSpeed: '',
+            windDirection: '',
+            reportTime: ''
+          },
+          forecast: [],
+          advice: '',
+          startDate: '',
+          endDate: '',
+          duration: 0
+        },
       };
 
       return travelGuide;
@@ -325,6 +348,93 @@ ${xiaohongshuInsights}
     } catch (error) {
       console.error('Error extracting budget:', error);
       return null;
+    }
+  }
+
+  private async getWeatherInfoForDestination(prompt: string): Promise<any> {
+    let destination = '';
+    let startDate: string | null = null;
+    let duration = 0;
+    
+    try {
+      // 从prompt中提取目的地城市、日期信息和行程天数
+      const extractionPrompt = `从以下用户旅行需求中提取信息：
+
+用户需求："${prompt}"
+
+请提取以下信息，以JSON格式返回：
+1. destination: 目的地城市名称
+2. startDate: 出发日期（如果用户指定了具体日期，如"3月15日出发"、"下周一去"等，返回具体日期；如果没有指定，返回null）
+3. duration: 行程天数（如"3天"、"一周"等，转换为数字天数）
+
+只返回JSON格式，例如：
+{"destination": "北京", "startDate": "2024-03-15", "duration": 3}
+或
+{"destination": "东京", "startDate": null, "duration": 5}`;
+
+      const response = await aiModel.doGenerate({
+        inputFormat: 'prompt',
+        mode: { type: 'regular' },
+        prompt: [{ role: 'user', content: [{ type: 'text', text: extractionPrompt }] }],
+        maxTokens: 200,
+      });
+
+
+
+      try {
+        const extractedData = JSON.parse(response.text?.trim() || '{}');
+        destination = extractedData.destination || '';
+        startDate = extractedData.startDate || null;
+        duration = extractedData.duration || 0;
+      } catch (parseError) {
+        console.warn('Failed to parse extracted data, falling back to simple extraction');
+        // 如果JSON解析失败，回退到简单提取
+        const simplePrompt = `从以下用户旅行需求中提取目的地城市名称：
+
+用户需求："${prompt}"
+
+请提取用户要去的目的地城市名称，只返回城市名称，不要其他文字。`;
+        
+        const simpleResponse = await aiModel.doGenerate({
+          inputFormat: 'prompt',
+          mode: { type: 'regular' },
+          prompt: [{ role: 'user', content: [{ type: 'text', text: simplePrompt }] }],
+          maxTokens: 100,
+        });
+        
+        destination = simpleResponse.text?.trim() || '';
+      }
+      
+      if (!destination) {
+        return '无法识别目的地，无法提供天气建议。';
+      }
+
+      // 调用高德地图服务获取天气信息，传递日期信息
+      const { amapServiceServer } = await import('@/lib/services/amap-service-server');
+      const weatherAdvice = await amapServiceServer.getWeatherAdviceWithDates(destination, startDate, duration);
+      
+      // 解析天气建议文本，提取结构化数据
+      const weatherData = this.parseWeatherAdviceToStructuredData(weatherAdvice, destination, startDate, duration);
+      
+      return weatherData;
+
+    } catch (error) {
+      console.error('Error getting weather advice:', error);
+      return {
+        current: {
+          temperature: '',
+          condition: '未知',
+          humidity: '',
+          windSpeed: '',
+          windDirection: '',
+          reportTime: ''
+        },
+        forecast: [],
+        advice: '无法获取天气信息，建议出行前查看当地天气预报。',
+        startDate: startDate || null,
+        endDate: null,
+        duration: duration
+      };
     }
   }
 
@@ -837,6 +947,143 @@ ${budget !== '待确认预算范围' ? `请严格按照用户预算${budget}来�
     // 从存储中获取用户偏好
     // 这里需要实现实际的存储逻辑
     return null;
+  }
+
+  /**
+   * 解析天气建议文本为结构化数据
+   */
+  private parseWeatherAdviceToStructuredData(weatherAdvice: string, destination: string, startDate: string | null, duration: number): any {
+    try {
+      const lines = weatherAdvice.split('\n');
+      
+      // 提取当前天气信息
+      const current = {
+        temperature: '',
+        condition: '',
+        humidity: '',
+        windSpeed: '',
+        windDirection: '',
+        reportTime: ''
+      };
+
+      lines.forEach(line => {
+        if (line.includes('当前温度：')) {
+          current.temperature = line.split('：')[1].replace('°C', '');
+        } else if (line.includes('天气状况：')) {
+          current.condition = line.split('：')[1];
+        } else if (line.includes('湿度：')) {
+          current.humidity = line.split('：')[1].replace('%', '');
+        } else if (line.includes('风向：')) {
+          const windInfo = line.split('：')[1];
+          current.windDirection = windInfo.split(' ')[0];
+          current.windSpeed = windInfo.split(' ')[1].replace('级', '');
+        } else if (line.includes('更新时间：')) {
+          current.reportTime = line.split('：')[1];
+        }
+      });
+
+      // 提取预报信息
+      const forecast: any[] = [];
+      let currentDate = startDate ? new Date(startDate) : new Date();
+      
+      lines.forEach((line, index) => {
+        if (line.includes('：') && (line.includes('转') || line.includes('°C'))) {
+          const parts = line.split('：');
+          if (parts.length >= 2) {
+            const dayLabel = parts[0];
+            const weatherInfo = parts[1];
+            
+            let dayWeather = '';
+            let nightWeather = '';
+            let dayTemp = '';
+            let nightTemp = '';
+            
+            if (weatherInfo.includes('转')) {
+              const [day, temp] = weatherInfo.split('，');
+              dayWeather = day || '';
+              nightWeather = day.includes('转') ? day.split('转')[1] : day;
+              
+              if (temp && temp.includes('°C')) {
+                const tempParts = temp.split('°C');
+                dayTemp = tempParts[0] || '';
+                nightTemp = tempParts[1] || '';
+              }
+            } else {
+              dayWeather = weatherInfo;
+            }
+            
+            // 计算具体日期
+            let forecastDate: Date;
+            if (dayLabel === '今天') {
+              forecastDate = new Date(currentDate);
+            } else if (dayLabel === '明天') {
+              forecastDate = new Date(currentDate);
+              forecastDate.setDate(forecastDate.getDate() + 1);
+            } else if (dayLabel === '后天') {
+              forecastDate = new Date(currentDate);
+              forecastDate.setDate(forecastDate.getDate() + 2);
+            } else {
+              // 如果是具体日期，尝试解析
+              forecastDate = new Date(currentDate);
+              forecastDate.setDate(forecastDate.getDate() + index);
+            }
+            
+            // 格式化日期为 YYYY-MM-DD 和可读格式
+            const dateString = forecastDate.toISOString().split('T')[0];
+            const readableDate = `${forecastDate.getMonth() + 1}月${forecastDate.getDate()}日`;
+            const weekDay = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][forecastDate.getDay()];
+            
+            forecast.push({
+              date: dateString,
+              readableDate: readableDate,
+              week: weekDay,
+              dayWeather: dayWeather,
+              nightWeather: nightWeather,
+              dayTemp: dayTemp,
+              nightTemp: nightTemp,
+              dayWind: '',
+              nightWind: '',
+              dayPower: '',
+              nightPower: ''
+            });
+          }
+        }
+      });
+
+      // 计算结束日期
+      let endDate = null;
+      if (startDate) {
+        const endDateObj = new Date(startDate);
+        endDateObj.setDate(endDateObj.getDate() + duration - 1);
+        endDate = `${endDateObj.getMonth() + 1}月${endDateObj.getDate()}日`;
+      }
+
+      return {
+        current,
+        forecast,
+        advice: weatherAdvice,
+        startDate: startDate,
+        endDate: endDate,
+        duration: duration
+      };
+    } catch (error) {
+      console.error('Error parsing weather advice:', error);
+      return {
+        current: {
+          temperature: '',
+          condition: '解析失败',
+          humidity: '',
+          windSpeed: '',
+          windDirection: '',
+          reportTime: ''
+        },
+        forecast: [],
+        advice: weatherAdvice,
+        startDate: startDate,
+        endDate: null,
+        duration: duration
+      };
+    }
   }
 }
 

@@ -16,6 +16,35 @@ export interface TravelGuide {
   tips: string[]
   map_locations?: MapLocation[]
   budget_breakdown?: BudgetItem[]
+  weather_info: WeatherInfo
+}
+
+export interface WeatherInfo {
+  current: {
+    temperature: string
+    condition: string
+    humidity: string
+    windSpeed: string
+    windDirection: string
+    reportTime: string
+  }
+  forecast: Array<{
+    date: string // YYYY-MM-DD 格式
+    readableDate: string // 可读格式，如"3月15日"
+    week: string // 周几，如"周一"
+    dayWeather: string
+    nightWeather: string
+    dayTemp: string
+    nightTemp: string
+    dayWind: string
+    nightWind: string
+    dayPower: string
+    nightPower: string
+  }>
+  advice: string
+  startDate?: string
+  endDate?: string
+  duration: number
 }
 
 export interface MapLocation {

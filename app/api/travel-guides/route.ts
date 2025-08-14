@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TravelGuideService } from '@/lib/services/travel-guide-service'
-import { TravelGuide } from '@/lib/supabase'
+import { FirebaseTravelGuide } from '@/lib/firebase'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const travelGuide: TravelGuide = body
+    const travelGuide: FirebaseTravelGuide = body
 
     const { data, error } = await TravelGuideService.createTravelGuide(travelGuide)
     
