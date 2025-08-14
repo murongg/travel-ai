@@ -1,0 +1,40 @@
+# AWS配置
+aws_region = "ap-northeast-1"  # 东京区域
+
+# 项目配置
+project_name = "ai-travel-guide"
+
+# 网络配置
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["ap-northeast-1a", "ap-northeast-1c"]
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs = ["10.0.101.0/24", "10.0.102.0/24"]
+
+# ECS配置
+app_cpu = 256      # 0.25 vCPU
+app_memory = 512   # 512 MB
+app_count = 2      # 2个实例
+
+# Firebase配置 - 请从Firebase控制台获取
+firebase_api_key = "your-firebase-api-key"
+firebase_auth_domain = "your-project.firebaseapp.com"
+firebase_project_id = "your-project-id"
+firebase_storage_bucket = "your-project.appspot.com"
+firebase_messaging_sender_id = "123456789"
+firebase_app_id = "1:123456789:web:abcdef"
+firebase_private_key = "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+firebase_client_email = "firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com"
+
+# 高德地图API配置 - 请从高德开放平台获取
+amap_api_key = "your-amap-api-key"
+
+# OpenAI API配置 - 请从OpenAI获取
+openai_api_key = "sk-your-openai-api-key"
+
+# 标签配置
+common_tags = {
+  Project     = "ai-travel-guide"
+  Environment = "production"
+  ManagedBy   = "terraform"
+  Owner       = "devops"
+}

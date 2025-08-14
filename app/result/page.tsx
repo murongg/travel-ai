@@ -13,12 +13,16 @@ import { GuideActions } from "@/components/guide-actions"
 import { LoadingSkeleton } from "@/components/loading-skeleton"
 import { FirebaseTravelGuide } from "@/lib/firebase"
 import { WeatherDestination } from "@/components/weather-destination"
+import { RoutePlanner } from "@/components/route-planner"
+import { RouteMap } from "@/components/route-map"
+import { DailyRoutePlan } from "@/lib/services/amap-service-server"
 
 export default function ResultPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [guide, setGuide] = useState<FirebaseTravelGuide | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [dailyRoutes, setDailyRoutes] = useState<any[]>([])
 
 
   // 使用AI生成的重要地点数据
@@ -365,6 +369,24 @@ export default function ResultPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Route Planning */}
+              <Card className="animate-in slide-in-from-left-4 duration-700 delay-700 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    🗺️ 高德地图导航
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RoutePlanner 
+                    itinerary={guide.itinerary} 
+                    destination={guide.destination}
+                    onRouteGenerated={setDailyRoutes}
+                  />
+                </CardContent>
+              </Card>
+
+
             </div>
 
             <div className="space-y-6">

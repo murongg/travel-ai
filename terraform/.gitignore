@@ -1,0 +1,42 @@
+# Terraform文件
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+tfplan
+tfplan.*
+
+# 环境变量文件
+*.tfvars
+!*.tfvars.example
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 项目文件（部署时会复制）
+app/
+components/
+lib/
+public/
+package.json
+pnpm-lock.yaml
+next.config.mjs
+tsconfig.json
+tailwind.config.js
+
+# 本地Docker镜像
+ai-travel-guide:latest
