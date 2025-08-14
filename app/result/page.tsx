@@ -6,41 +6,38 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, MapPin, Calendar, DollarSign, Star, Clock, Utensils, Bed } from "lucide-react"
-import { type TravelGuide } from "@/lib/mock-data"
+import { ArrowLeft, MapPin, Calendar, Star, Clock, Utensils, Bed } from "lucide-react"
 import { BudgetBreakdown } from "@/components/budget-breakdown"
 import { TravelMap } from "@/components/travel-map"
 import { GuideActions } from "@/components/guide-actions"
 import { LoadingSkeleton } from "@/components/loading-skeleton"
-import { ProgressTracker, useProgressTracking } from "@/components/progress-tracker"
+import { SupabaseTravelGuide } from "@/lib/supabase"
 
 export default function ResultPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [guide, setGuide] = useState<TravelGuide | null>(null)
+  const [guide, setGuide] = useState<SupabaseTravelGuide | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isGeneratingFromPrompt, setIsGeneratingFromPrompt] = useState(false)
-  
-  const { progressState, isLoading: isProgressLoading, error: progressError, result, startProgressTracking } = useProgressTracking()
+
 
   // 使用AI生成的重要地点数据
-  const mapLocations = useMemo(() => {
+  const map_locations = useMemo(() => {
     if (!guide) return [];
-    
+
     // 优先使用AI生成的mapLocations
-    if (guide.mapLocations && guide.mapLocations.length > 0) {
-      return guide.mapLocations.map(location => ({
+    if (guide.map_locations && guide.map_locations.length > 0) {
+      return guide.map_locations.map(location => ({
         ...location,
         day: location.day || 1 // 确保day有默认值
       }));
     }
-    
+
     // 如果没有AI生成的地点，回退到从行程中提取
     const locations: Array<{ name: string; type: "attraction" | "restaurant" | "hotel"; day: number }> = [];
-    
+
     guide.itinerary.forEach((dayPlan, index) => {
       const dayNumber = dayPlan.day || (index + 1);
-      
+
       // 提取活动地点作为景点
       dayPlan.activities?.forEach((activity) => {
         if (activity.name && activity.location) {
@@ -51,42 +48,25 @@ export default function ResultPage() {
           });
         }
       });
-      
+
       // 提取餐厅
       dayPlan.meals?.forEach((meal) => {
         if (meal.name && meal.location) {
           locations.push({
             name: meal.name,
-            type: "restaurant", 
+            type: "restaurant",
             day: dayNumber
           });
         }
       });
     });
-    
+
     return locations;
   }, [guide])
 
-  // 监听进度跟踪结果
-  useEffect(() => {
-    if (result) {
-      setGuide(result);
-      setIsLoading(false);
-      setIsGeneratingFromPrompt(false);
-    }
-  }, [result]);
-
-  // 监听进度跟踪错误
-  useEffect(() => {
-    if (progressError) {
-      setIsLoading(false);
-      setIsGeneratingFromPrompt(false);
-    }
-  }, [progressError]);
-
   useEffect(() => {
     const guideId = searchParams.get("guideId")
-    const prompt = searchParams.get("prompt")
+    setIsLoading(true);
 
     if (guideId) {
       const storedGuide = localStorage.getItem("generatedGuide")
@@ -104,8 +84,6 @@ export default function ResultPage() {
 
       // Fallback to API call if no stored data
       fetchGuideById(guideId)
-    } else if (prompt) {
-      generateGuideFromPrompt(prompt)
     } else {
       router.push("/")
     }
@@ -113,12 +91,31 @@ export default function ResultPage() {
 
   const fetchGuideById = async (guideId: string) => {
     try {
-      const response = await fetch(`/api/generate?guideId=${guideId}`)
+      const response = await fetch(`/api/travel-guides/${guideId}`)
       if (!response.ok) {
         throw new Error("Failed to fetch guide")
       }
-      const data = await response.json()
-      setGuide(data.guide)
+      const { data } = await response.json()
+
+      // Normalize DB shape (snake_case, jsonb) to UI shape used here
+      const normalizeGuideFromDb = (db: any): any => {
+        return {
+          id: db.id,
+          title: db.title || `${db.destination || ''} 旅行指南`,
+          destination: db.destination,
+          duration: db.duration,
+          budget: db.budget,
+          overview: db.overview,
+          highlights: db.highlights || [],
+          tips: db.tips || [],
+          itinerary: db.itinerary || [],
+          map_locations: db.map_locations || [],
+          budget_breakdown: db.budget_breakdown || [],
+          createdAt: db.created_at,
+        }
+      }
+
+      setGuide(normalizeGuideFromDb(data))
     } catch (error) {
       console.error("Error fetching guide:", error)
     } finally {
@@ -126,24 +123,13 @@ export default function ResultPage() {
     }
   }
 
-  const generateGuideFromPrompt = async (prompt: string) => {
-    try {
-      setIsGeneratingFromPrompt(true);
-      // 使用进度跟踪模式生成指南
-      await startProgressTracking(prompt);
-    } catch (error) {
-      console.error("Error generating guide:", error);
-      setIsLoading(false);
-      setIsGeneratingFromPrompt(false);
-    }
-  }
 
-  if (isLoading && !isGeneratingFromPrompt) {
+  if (isLoading) {
     return <LoadingSkeleton />
   }
 
   // 如果正在从prompt生成，显示进度跟踪
-  if (isGeneratingFromPrompt || (isProgressLoading && !guide)) {
+  if ((!guide)) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
@@ -164,39 +150,6 @@ export default function ResultPage() {
                 <p className="text-muted-foreground">请稍候，AI正在为您精心规划...</p>
               </div>
             </div>
-
-            {/* 进度跟踪器 */}
-            {progressState && (
-              <div className="mb-8">
-                <ProgressTracker progressState={progressState} />
-              </div>
-            )}
-
-            {/* 错误显示 */}
-            {progressError && (
-              <div className="mb-8">
-                <Card className="border-red-200 bg-red-50">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <span className="text-red-600 text-sm">!</span>
-                      </div>
-                      <div>
-                        <h3 className="text-red-800 font-medium">生成失败</h3>
-                        <p className="text-red-600 text-sm mt-1">{progressError}</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => window.location.reload()}
-                      className="mt-4"
-                      variant="outline"
-                    >
-                      重新生成
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -218,7 +171,7 @@ export default function ResultPage() {
   }
 
   // 使用AI生成的预算明细，如果没有则使用默认值
-  const budgetBreakdown = guide.budgetBreakdown || [
+  const budget_breakdown = guide.budget_breakdown || [
     { category: "交通费用", amount: 4500, percentage: 30, color: "#3b82f6" },
     { category: "住宿费用", amount: 4200, percentage: 28, color: "#8b5cf6" },
     { category: "餐饮费用", amount: 3600, percentage: 24, color: "#10b981" },
@@ -434,17 +387,17 @@ export default function ResultPage() {
             <div className="space-y-6">
               {/* Budget Breakdown */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-300">
-                <BudgetBreakdown totalBudget={guide.budget} breakdown={budgetBreakdown} />
+                <BudgetBreakdown totalBudget={guide.budget} breakdown={budget_breakdown} />
               </div>
 
               {/* Travel Map */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-500">
-                <TravelMap locations={mapLocations} destination={guide.destination} />
+                <TravelMap locations={map_locations} destination={guide.destination} />
               </div>
 
               {/* Guide Actions */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-700">
-                <GuideActions guideId={guide.id} title={guide.title} />
+                <GuideActions guideId={guide.id!} title={guide.title} />
               </div>
             </div>
           </div>

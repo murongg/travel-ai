@@ -6,7 +6,6 @@ export interface BudgetItem {
 }
 
 export interface TravelGuide {
-  id: string
   title: string
   destination: string
   duration: string
@@ -15,9 +14,8 @@ export interface TravelGuide {
   highlights: string[]
   itinerary: DayPlan[]
   tips: string[]
-  mapLocations?: MapLocation[]
-  budgetBreakdown?: BudgetItem[]
-  createdAt: string
+  map_locations?: MapLocation[]
+  budget_breakdown?: BudgetItem[]
 }
 
 export interface MapLocation {

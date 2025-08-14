@@ -2,20 +2,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MapPin, Navigation, Loader2 } from "lucide-react"
 import { useEffect, useState } from 'react'
-import { amapService, LocationResult } from '@/lib/services/amap-service'
+import { amapService } from '@/lib/services/amap-service'
 import dynamic from 'next/dynamic';
 
 // 动态导入地图组件以避免SSR问题
-const Map = dynamic(() => import('@uiw/react-amap').then(mod => mod.Map), { 
+const Map = dynamic(() => import('@uiw/react-amap').then(mod => mod.Map), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full">地图加载中...</div>
 });
-const Marker = dynamic(() => import('@uiw/react-amap').then(mod => mod.Marker), { 
-  ssr: false 
+const Marker = dynamic(() => import('@uiw/react-amap').then(mod => mod.Marker), {
+  ssr: false
 });
-const APILoader = dynamic(() => import('@uiw/react-amap').then(mod => mod.APILoader), { 
-  ssr: false 
+const APILoader = dynamic(() => import('@uiw/react-amap').then(mod => mod.APILoader), {
+  ssr: false
 });
+
 
 interface MapLocation {
   name: string
@@ -57,7 +58,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
 
   const getTypeIcon = (type: string) => {
     const iconClass = `w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm`;
-    
+
     switch (type) {
       case "attraction":
         return (
@@ -95,27 +96,27 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
       }
 
       setIsGeocoding(true);
-      
+
       try {
         // 1. 计算地图中心点坐标
         let centerCoordinates = mapCenter;
         const locationsWithCoords = locations.filter(loc => loc.coordinates);
-        
+
         // 直接获取目标城市的中心坐标作为地图中心
         const cityCenter = await amapService.getCityCenter(destination);
         if (cityCenter) {
           centerCoordinates = cityCenter;
           console.log('使用城市中心作为地图中心:', cityCenter);
-          
+
           // 根据地点数量智能设置缩放级别
           let zoom = 12; // 默认缩放级别
           if (locationsWithCoords.length > 10) zoom = 10;      // 很多地点，缩小视野
           else if (locationsWithCoords.length > 5) zoom = 11;  // 较多地点
           else if (locationsWithCoords.length > 2) zoom = 12;  // 中等数量
           else zoom = 13;                                       // 少量地点，放大视野
-          
+
           setMapZoom(zoom);
-          
+
           console.log('地图中心设置完成:', {
             目标城市: destination,
             城市中心坐标: centerCoordinates,
@@ -125,7 +126,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
         } else {
           console.warn(`无法获取城市中心坐标: ${destination}`);
         }
-        
+
         // 更新地图中心点
         setMapCenter(centerCoordinates);
 
@@ -137,7 +138,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
         }));
 
         setEnhancedLocations(enhanced);
-        
+
         // 调试信息
         console.log('TravelMap处理结果:', {
           totalLocations: enhanced.length,
@@ -145,7 +146,7 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
           mapCenter: centerCoordinates,
           enhanced: enhanced
         });
-        
+
       } catch (error) {
         console.error('地图处理失败:', error);
       } finally {
@@ -178,33 +179,36 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
             <div className="relative h-full">
               <APILoader akey={process.env.NEXT_PUBLIC_AMAP_KEY || 'placeholder_key_for_react_amap'}>
                 <Map style={{ height: '100%' }}
+                  center={mapCenter as any}
+                  zoom={mapZoom}
                 >
-                {enhancedLocations
-                  .filter(location => location.resolvedCoordinates)
-                  .map((location, index) => {
-                    console.log(`渲染Marker ${index}:`, location.name, location.resolvedCoordinates);
-                    
-                    // 确保坐标格式正确
-                    if (!location.resolvedCoordinates || !Array.isArray(location.resolvedCoordinates) || location.resolvedCoordinates.length !== 2) {
-                      console.warn(`无效的坐标数据 ${index}:`, location.resolvedCoordinates);
-                      return null;
-                    }
-                    
-                    const position: [number, number] = [location.resolvedCoordinates[0], location.resolvedCoordinates[1]];
-                    console.log(`Marker位置 ${index}:`, position);
-                    
-                    return (
-                      <Marker
-                        key={`marker-${index}`}
-                        // offset={new AMap.Pixel(-12, -12)}
-                      >
-                        {getTypeIcon(location.type)}
-                      </Marker>
-                    );
-                  })}
+                  {enhancedLocations
+                    .filter(location => location.resolvedCoordinates)
+                    .map((location, index) => {
+                      console.log(`渲染Marker ${index}:`, location.name, location.resolvedCoordinates);
+
+                      // 确保坐标格式正确
+                      if (!location.resolvedCoordinates || !Array.isArray(location.resolvedCoordinates) || location.resolvedCoordinates.length !== 2) {
+                        console.warn(`无效的坐标数据 ${index}:`, location.resolvedCoordinates);
+                        return null;
+                      }
+
+                      const position: [number, number] = [location.resolvedCoordinates[0], location.resolvedCoordinates[1]];
+                      console.log(`Marker位置 ${index}:`, position);
+
+                      return (
+                        <Marker
+                          key={`marker-${index}`}
+                          // offset={new AMap.Pixel(-12, -12)}
+                          position={position as any}
+                        >
+                          {getTypeIcon(location.type)}
+                        </Marker>
+                      );
+                    })}
                 </Map>
               </APILoader>
-              
+
               {/* API密钥提示 */}
               {(!process.env.NEXT_PUBLIC_AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_KEY === 'placeholder_key_for_react_amap') && (
                 <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded text-xs">

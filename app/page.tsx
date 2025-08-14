@@ -142,25 +142,6 @@ export default function HomePage() {
                 <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">{prompt.length}/500</div>
               </div>
 
-              {/* 进度模式选择 */}
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg border">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="progressMode"
-                    checked={useProgressMode}
-                    onChange={(e) => setUseProgressMode(e.target.checked)}
-                    className="w-4 h-4 text-primary border rounded focus:ring-primary"
-                  />
-                  <label htmlFor="progressMode" className="text-sm font-medium text-foreground">
-                    启用实时进度跟踪
-                  </label>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {useProgressMode ? "可查看详细生成步骤" : "快速生成模式"}
-                </div>
-              </div>
-
               <Button
                 onClick={handleGenerate}
                 disabled={!prompt.trim() || isGenerating}

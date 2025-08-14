@@ -21,12 +21,13 @@ export async function POST(request: NextRequest) {
           { id: 'analyze-prompt', name: '分析用户需求' },
           { id: 'identify-transport', name: '识别交通方式' },
           { id: 'extract-keyword', name: '提取关键词' },
-          { id: 'fetch-insights', name: '获取小红书经验' },
+          { id: 'fetch-insights', name: '联网搜索' },
           { id: 'generate-basic', name: '生成基础信息' },
           { id: 'generate-itinerary', name: '生成详细行程' },
           { id: 'generate-locations', name: '生成重要地点' },
           { id: 'generate-budget', name: '生成预算明细' },
           { id: 'finalize', name: '整合旅行指南' },
+          { id: 'save-database', name: '保存到数据库' },
         ];
 
         // 创建进度管理器

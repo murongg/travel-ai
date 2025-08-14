@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TravelGuideService } from '@/lib/services/travel-guide-service'
-import { TravelGuide } from '@/lib/supabase'
+import { SupabaseTravelGuide } from '@/lib/supabase'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { data, error } = await TravelGuideService.getTravelGuideById(params.id)
+    const { id } = await ctx.params
+    const { data, error } = await TravelGuideService.getTravelGuideById(id)
     
     if (error) {
       return NextResponse.json(
@@ -35,13 +36,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
-    const updates: Partial<TravelGuide> = body
-
-    const { data, error } = await TravelGuideService.updateTravelGuide(params.id, updates)
+    const updates: Partial<SupabaseTravelGuide> = body
+    const { id } = await ctx.params
+    const { data, error } = await TravelGuideService.updateTravelGuide(id, updates)
     
     if (error) {
       return NextResponse.json(
@@ -62,10 +63,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { error } = await TravelGuideService.deleteTravelGuide(params.id)
+    const { id } = await ctx.params
+    const { error } = await TravelGuideService.deleteTravelGuide(id)
     
     if (error) {
       return NextResponse.json(

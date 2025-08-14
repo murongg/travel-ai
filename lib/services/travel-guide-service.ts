@@ -1,9 +1,9 @@
-import { supabase, TravelGuide, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase, SupabaseTravelGuide, isSupabaseConfigured } from '@/lib/supabase'
 import { getSupabaseAdminClient, isSupabaseAdminConfigured } from '@/lib/supabase-admin'
 
 export class TravelGuideService {
   // 创建新的旅行指南
-  static async createTravelGuide(travelGuide: TravelGuide): Promise<{ data: TravelGuide | null; error: any }> {
+  static async createTravelGuide(travelGuide: SupabaseTravelGuide): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -26,7 +26,7 @@ export class TravelGuideService {
           return { data: null, error }
         }
 
-        return { data: data as unknown as TravelGuide, error: null }
+        return { data: data as unknown as SupabaseTravelGuide, error: null }
       }
 
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ export class TravelGuideService {
   }
 
   // 根据ID获取旅行指南
-  static async getTravelGuideById(id: string): Promise<{ data: TravelGuide | null; error: any }> {
+  static async getTravelGuideById(id: string): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -76,7 +76,7 @@ export class TravelGuideService {
   }
 
   // 根据提示词获取旅行指南
-  static async getTravelGuideByPrompt(prompt: string): Promise<{ data: TravelGuide | null; error: any }> {
+  static async getTravelGuideByPrompt(prompt: string): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -106,7 +106,7 @@ export class TravelGuideService {
   }
 
   // 获取所有公开的旅行指南
-  static async getPublicTravelGuides(): Promise<{ data: TravelGuide[] | null; error: any }> {
+  static async getPublicTravelGuides(): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -134,7 +134,7 @@ export class TravelGuideService {
   }
 
   // 根据目的地搜索旅行指南
-  static async searchTravelGuidesByDestination(destination: string): Promise<{ data: TravelGuide[] | null; error: any }> {
+  static async searchTravelGuidesByDestination(destination: string): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -162,7 +162,7 @@ export class TravelGuideService {
   }
 
   // 更新旅行指南
-  static async updateTravelGuide(id: string, updates: Partial<TravelGuide>): Promise<{ data: TravelGuide | null; error: any }> {
+  static async updateTravelGuide(id: string, updates: Partial<SupabaseTravelGuide>): Promise<{ data: SupabaseTravelGuide | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 
@@ -217,7 +217,7 @@ export class TravelGuideService {
   }
 
   // 获取用户的旅行指南
-  static async getUserTravelGuides(userId: string): Promise<{ data: TravelGuide[] | null; error: any }> {
+  static async getUserTravelGuides(userId: string): Promise<{ data: SupabaseTravelGuide[] | null; error: any }> {
     if (!isSupabaseConfigured()) {
       return { 
         data: null, 

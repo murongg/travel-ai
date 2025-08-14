@@ -225,6 +225,7 @@ export class AmapServiceServer {
 
   async smartGeocode(fullAddress: string, destination: string): Promise<LocationResult | null> {
     const normalizedCity = this.normalizeCityName(destination);
+    console.log('normalizedCity', normalizedCity)
     
     // 策略1: 先尝试完整地址 + 目标城市
     let result = await this.geocoding(fullAddress, normalizedCity);

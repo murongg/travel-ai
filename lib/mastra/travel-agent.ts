@@ -4,7 +4,7 @@ import { XiaoHongShu } from "@/lib/api/xiaohongshu";
 import { ProgressManager } from "@/lib/progress-manager";
 import { amapServiceServer } from "@/lib/services/amap-service-server";
 import { TravelGuideService } from "@/lib/services/travel-guide-service";
-import { TravelGuide as SupabaseTravelGuide } from "@/lib/supabase";
+import { SupabaseTravelGuide } from "@/lib/supabase";
 
 export interface TravelRequest {
   destination: string;
@@ -33,45 +33,47 @@ export class TravelAgent {
       progressManager.startStep('identify-transport', '正在识别您的交通偏好...');
       const transportationMode = await this.identifyTransportationMode(prompt);
       progressManager.completeStep('identify-transport', transportationMode, `识别到交通方式：${transportationMode}`);
-      
-      // 步骤2: 从用户prompt提取关键词
-      progressManager.startStep('extract-keyword', '正在提取搜索关键词...');
+
+      // 步骤2: 从用户prompt提取关键词和预算信息
+      progressManager.startStep('extract-keyword', '正在提取搜索关键词和预算信息...');
       const keyword = await this.extractKeywordFromPrompt(prompt);
-      progressManager.completeStep('extract-keyword', keyword, `提取关键词：${keyword}`);
-      
+      const userBudget = await this.extractBudgetFromPrompt(prompt);
+      progressManager.completeStep('extract-keyword', keyword, `提取关键词：${keyword}，预算信息：${userBudget || '未指定'}`);
+
       // 步骤3: 获取小红书相关内容分析
-      progressManager.startStep('fetch-insights', '正在获取小红书用户经验...');
+      progressManager.startStep('fetch-insights', '正在联网搜索...');
       const xiaohongshuInsights = await this.getXiaohongshuInsights(keyword);
-      progressManager.completeStep('fetch-insights', xiaohongshuInsights, '小红书经验获取完成');
-      
+      progressManager.completeStep('fetch-insights', xiaohongshuInsights, '联网搜索完成');
+
       // 步骤4: 结合小红书数据和交通方式生成增强的旅行指南
       progressManager.startStep('generate-basic', '正在生成基础旅行信息...');
-      const enhancedPrompt = `作为专业AI旅行专家，请结合用户需求、交通偏好和小红书真实分享生成专业指南：
+      const enhancedPrompt = `作为专业AI旅行专家，请结合用户需求、交通偏好、预算信息和小红书真实分享生成专业指南：
 
 用户需求："${prompt}"
 识别的交通方式：${transportationMode}
+${userBudget ? `用户预算：${userBudget}` : '用户预算：未指定'}
 
 小红书真实用户经验分析：
 ${xiaohongshuInsights}
 
-请结合用户需求和小红书真实经验，以JSON格式返回专业分析：
+请结合用户需求、预算信息和小红书真实经验，以JSON格式返回专业分析：
 {
-  "destination": "目的地名称（不超过20个字）",
+  "destination": "目的地城市名称（如：北京、上海、东京、巴黎等，不超过20个字）",
   "duration": "X天Y夜",
-  "budget": "基于真实经验的预算建议（不超过20个字）",
-  "overview": "结合真实用户经验的专业概述（不超过100字）",
+  "budget": "${userBudget ? `基于用户预算${userBudget}的优化建议（不超过20个字）` : '基于真实经验的预算建议（不超过20个字）'}",
+  "overview": "结合真实用户经验和预算考虑的专业概述（不超过100字）",
   "highlights": ["结合小红书的亮点1（不超过30字）", "亮点2", "亮点3", "亮点4", "亮点5", "亮点6"],
-  "tips": ["基于真实用户经验的专业建议1（不超过30字）", "建议2", "建议3", "建议4", "建议5", "建议6"]
+  "tips": ["基于真实用户经验和预算考虑的专业建议1（不超过30字）", "建议2", "建议3", "建议4", "建议5", "建议6"]
 }
 
-请重点结合小红书用户的真实经验和用户的交通偏好，提供专业和准确建议。
-专业交通建议：
-- 自驾游：推荐自驾友好景点、停车便利地点、最佳自驾路线
-- 公共交通：优选地铁/公交便利景点、交通枢纽住宿、换乘优化
-- 骑行：推荐骑行友好路线、自行车租赁点、骑行安全提示
-- 步行：控制步行距离、推荐步行街区、徒步路线规划
-- 飞行：机场交通衔接、航班时间优化、行李寄存建议
-- 综合交通：多模式交通组合、最优换乘方案、灵活出行选择
+请重点结合小红书用户的真实经验、用户的交通偏好和预算考虑，提供专业和准确建议。
+专业交通建议（请结合预算考虑）：
+- 自驾游：推荐自驾友好景点、停车便利地点、最佳自驾路线，考虑油费、停车费、过路费等成本
+- 公共交通：优选地铁/公交便利景点、交通枢纽住宿、换乘优化，控制交通成本
+- 骑行：推荐骑行友好路线、自行车租赁点、骑行安全提示，考虑租赁费用
+- 步行：控制步行距离、推荐步行街区、徒步路线规划，节省交通费用
+- 飞行：机场交通衔接、航班时间优化、行李寄存建议，考虑机票价格和机场交通成本
+- 综合交通：多模式交通组合、最优换乘方案、灵活出行选择，平衡便利性和成本
 
 重要：请严格返回有效的JSON格式，不要添加任何解释文字、markdown代码块或其他内容。确保JSON语法正确，所有字符串用双引号包围。
 
@@ -88,26 +90,26 @@ ${xiaohongshuInsights}
       const response = await aiModel.doGenerate({
         inputFormat: 'prompt',
         mode: { type: 'regular' },
-        prompt: [{ 
-          role: 'user', 
-          content: [{ 
-            type: 'text', 
+        prompt: [{
+          role: 'user',
+          content: [{
+            type: 'text',
             text: enhancedPrompt
-          }] 
+          }]
         }],
         maxTokens: 1000,
       });
 
       const content = response.text || '生成旅行指南时出现错误，请稍后重试。';
       progressManager.completeStep('generate-basic', content, '基础信息生成完成');
-      
+
       // 解析AI响应，构建TravelGuide对象
-      const travelGuide = await this.parseAIResponseToTravelGuideWithProgress(content, prompt, xiaohongshuInsights, transportationMode, progressManager);
-      
+      const travelGuide = await this.parseAIResponseToTravelGuideWithProgress(content, prompt, xiaohongshuInsights, transportationMode, progressManager, userBudget);
+
       progressManager.startStep('finalize', '正在整合旅行指南...');
       await this.sleep(300); // 模拟整合时间
       progressManager.completeStep('finalize', travelGuide, '旅行指南生成完成！');
-      
+
       // 保存到数据库
       progressManager.startStep('save-database', '正在保存到数据库...');
       try {
@@ -120,42 +122,15 @@ ${xiaohongshuInsights}
           overview: travelGuide.overview,
           highlights: travelGuide.highlights,
           tips: travelGuide.tips,
-          itinerary: travelGuide.itinerary.map(day => ({
-            day: day.day,
-            activities: day.activities.map(activity => ({
-              name: activity.name,
-              description: activity.description,
-              time: activity.time,
-              location: activity.location,
-              cost: parseFloat(activity.cost) || 0
-            })),
-            meals: day.meals.map(meal => ({
-              name: meal.name,
-              description: meal.description,
-              time: meal.type === 'breakfast' ? '08:00' : meal.type === 'lunch' ? '12:00' : '18:00',
-              location: meal.location,
-              cost: parseFloat(meal.cost) || 0
-            })),
-            accommodation: day.accommodation
-          })),
-          map_locations: (travelGuide.mapLocations || []).map(location => ({
-            name: location.name,
-            type: location.type,
-            day: location.day || 1,
-            description: location.description,
-            coordinates: location.coordinates
-          })),
-          budget_breakdown: (travelGuide.budgetBreakdown || []).map(item => ({
-            category: item.category,
-            amount: item.amount,
-            percentage: item.percentage,
-            color: item.color
-          })),
+          itinerary: travelGuide.itinerary,
+          map_locations: travelGuide.map_locations || [],
+          budget_breakdown: travelGuide.budget_breakdown || [],
           transportation: transportationMode || '未知',
           user_id: undefined,
-          is_public: true
+          is_public: true,
+          title: travelGuide.title
         };
-        
+
         const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(supabaseTravelGuide);
         if (error) {
           console.error('Error saving to database:', error);
@@ -168,150 +143,17 @@ ${xiaohongshuInsights}
         console.error('Exception saving to database:', dbError);
         progressManager.completeStep('save-database', null, '数据库保存异常，但旅行指南已生成');
       }
-      
+
       return travelGuide;
-      
+
     } catch (error) {
       console.error('Error generating travel guide from prompt:', error);
       throw new Error('生成旅行指南时出现错误，请稍后重试。');
     }
   }
 
-  async generateTravelGuideFromPrompt(prompt: string): Promise<TravelGuide> {
-    try {
-      // 步骤1: 识别用户偏好的交通方式
-      const transportationMode = await this.identifyTransportationMode(prompt);
-      
-      // 步骤2: 从用户prompt提取关键词
-      const keyword = await this.extractKeywordFromPrompt(prompt);
-      
-      // 步骤3: 获取小红书相关内容分析
-      const xiaohongshuInsights = await this.getXiaohongshuInsights(keyword);
-      
-      // 步骤4: 结合小红书数据和交通方式生成增强的旅行指南
-      const enhancedPrompt = `作为专业AI旅行专家，请结合用户需求、交通偏好和小红书真实分享生成专业指南：
 
-用户需求："${prompt}"
-识别的交通方式：${transportationMode}
-
-小红书真实用户经验分析：
-${xiaohongshuInsights}
-
-请结合用户需求和小红书真实经验，以JSON格式返回专业分析：
-{
-  "destination": "目的地名称（不超过20个字）",
-  "duration": "X天Y夜",
-  "budget": "基于真实经验的预算建议（不超过20个字）",
-  "overview": "结合真实用户经验的专业概述（不超过100字）",
-  "highlights": ["结合小红书的亮点1（不超过30字）", "亮点2", "亮点3", "亮点4", "亮点5", "亮点6"],
-  "tips": ["基于真实用户经验的专业建议1（不超过30字）", "建议2", "建议3", "建议4", "建议5", "建议6"]
-}
-
-请重点结合小红书用户的真实经验和用户的交通偏好，提供专业和准确建议。
-专业交通建议：
-- 自驾游：推荐自驾友好景点、停车便利地点、最佳自驾路线
-- 公共交通：优选地铁/公交便利景点、交通枢纽住宿、换乘优化
-- 骑行：推荐骑行友好路线、自行车租赁点、骑行安全提示
-- 步行：控制步行距离、推荐步行街区、徒步路线规划
-- 飞行：机场交通衔接、航班时间优化、行李寄存建议
-- 综合交通：多模式交通组合、最优换乘方案、灵活出行选择
-
-重要：请严格返回有效的JSON格式，不要添加任何解释文字、markdown代码块或其他内容。确保JSON语法正确，所有字符串用双引号包围。
-
-只返回JSON：
-{
-  "destination": "...",
-  "duration": "...",
-  "budget": "...",
-  "overview": "...",
-  "highlights": [...],
-  "tips": [...]
-}`;
-
-      const response = await aiModel.doGenerate({
-        inputFormat: 'prompt',
-        mode: { type: 'regular' },
-        prompt: [{ 
-          role: 'user', 
-          content: [{ 
-            type: 'text', 
-            text: enhancedPrompt
-          }] 
-        }],
-        maxTokens: 1000,
-      });
-
-      const content = response.text || '生成旅行指南时出现错误，请稍后重试。';
-      
-      // 解析AI响应，构建TravelGuide对象
-      const travelGuide = await this.parseAIResponseToTravelGuide(content, prompt, xiaohongshuInsights, transportationMode);
-      
-      // 保存到数据库
-      try {
-        // 转换类型以匹配数据库结构
-        const supabaseTravelGuide: SupabaseTravelGuide = {
-          prompt: prompt,
-          destination: travelGuide.destination,
-          duration: travelGuide.duration,
-          budget: travelGuide.budget,
-          overview: travelGuide.overview,
-          highlights: travelGuide.highlights,
-          tips: travelGuide.tips,
-          itinerary: travelGuide.itinerary.map(day => ({
-            day: day.day,
-            activities: day.activities.map(activity => ({
-              name: activity.name,
-              description: activity.description,
-              time: activity.time,
-              location: activity.location,
-              cost: parseFloat(activity.cost) || 0
-            })),
-            meals: day.meals.map(meal => ({
-              name: meal.name,
-              description: meal.description,
-              time: meal.type === 'breakfast' ? '08:00' : meal.type === 'lunch' ? '12:00' : '18:00',
-              location: meal.location,
-              cost: parseFloat(meal.cost) || 0
-            })),
-            accommodation: day.accommodation
-          })),
-          map_locations: (travelGuide.mapLocations || []).map(location => ({
-            name: location.name,
-            type: location.type,
-            day: location.day || 1,
-            description: location.description,
-            coordinates: location.coordinates
-          })),
-          budget_breakdown: (travelGuide.budgetBreakdown || []).map(item => ({
-            category: item.category,
-            amount: item.amount,
-            percentage: item.percentage,
-            color: item.color
-          })),
-          transportation: transportationMode || '未知',
-          user_id: undefined,
-          is_public: true
-        };
-        
-        const { data: savedGuide, error } = await TravelGuideService.createTravelGuide(supabaseTravelGuide);
-        if (error) {
-          console.error('Error saving to database:', error);
-        } else {
-          console.log('Travel guide saved to database with ID:', savedGuide?.id);
-        }
-      } catch (dbError) {
-        console.error('Exception saving to database:', dbError);
-      }
-      
-      return travelGuide;
-      
-    } catch (error) {
-      console.error('Error generating travel guide from prompt:', error);
-      throw new Error('生成旅行指南时出现错误，请稍后重试。');
-    }
-  }
-
-  private async parseAIResponseToTravelGuideWithProgress(content: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string, progressManager?: ProgressManager): Promise<TravelGuide> {
+  private async parseAIResponseToTravelGuideWithProgress(content: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string, progressManager?: ProgressManager, userBudget?: string | null): Promise<TravelGuide> {
     try {
       // 尝试解析JSON响应，使用更健壮的方法
       let jsonString = '';
@@ -321,12 +163,11 @@ ${xiaohongshuInsights}
           .replace(/,(\s*[}\]])/g, '$1') // 移除多余的逗号
           .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // 为键添加引号
           .trim();
-        
+
         const parsedData = JSON.parse(jsonString);
-        
+
         // 生成基础的旅行指南结构
         const travelGuide: TravelGuide = {
-          id: `guide-${Date.now()}`,
           title: `${this.truncateText(parsedData.destination || 'AI智能推荐', 20)}${parsedData.duration || '5天4夜'}攻略`,
           destination: this.truncateText(parsedData.destination || "AI智能推荐目的地", 20),
           duration: parsedData.duration || "5天4夜",
@@ -334,10 +175,9 @@ ${xiaohongshuInsights}
           overview: this.truncateText(parsedData.overview || "这是一份由AI智能生成的个性化旅行指南，为您提供全面的旅行规划建议，包含详细行程安排", 100),
           highlights: Array.isArray(parsedData.highlights) ? parsedData.highlights.map((h: string) => this.truncateText(h, 30)) : ['AI个性化智能推荐', '专业智能行程规划', '实用旅行建议指导'],
           itinerary: [],
-          mapLocations: [],
-          budgetBreakdown: [],
+          map_locations: [],
+          budget_breakdown: [],
           tips: Array.isArray(parsedData.tips) ? parsedData.tips.map((t: string) => this.truncateText(t, 30)) : ['出行前请仔细检查签证要求和有效期', '建议购买合适的旅行保险保障安全', '密切关注当地天气变化情况'],
-          createdAt: new Date().toISOString(),
         };
 
         // 异步生成其他组件
@@ -347,59 +187,21 @@ ${xiaohongshuInsights}
         travelGuide.itinerary = await this.extractItineraryFromAI(content, parsedData.duration || "5天4夜", originalPrompt, xiaohongshuInsights, transportationMode);
         if (progressManager) {
           progressManager.completeStep('generate-itinerary', travelGuide.itinerary, '详细行程生成完成');
-          
+
           progressManager.startStep('generate-locations', '正在生成重要地点...');
         }
-        travelGuide.mapLocations = await this.generateImportantLocations(parsedData.destination || "未知目的地", originalPrompt);
+        travelGuide.map_locations = await this.generateImportantLocations(parsedData.destination || "未知目的地", originalPrompt);
         if (progressManager) {
-          progressManager.completeStep('generate-locations', travelGuide.mapLocations, '重要地点生成完成');
-          
+          progressManager.completeStep('generate-locations', travelGuide.map_locations, '重要地点生成完成');
+
           progressManager.startStep('generate-budget', '正在生成预算明细...');
         }
-        travelGuide.budgetBreakdown = await this.generateBudgetBreakdown(parsedData.budget || "待确认预算范围", parsedData.destination || "未知目的地", parsedData.duration || "5天4夜", originalPrompt);
+        // 优先使用用户指定的预算，如果没有则使用AI生成的预算
+        const finalBudget = userBudget || parsedData.budget || "待确认预算范围";
+        travelGuide.budget_breakdown = await this.generateBudgetBreakdown(finalBudget, parsedData.destination || "未知目的地", parsedData.duration || "5天4夜", originalPrompt);
         if (progressManager) {
-          progressManager.completeStep('generate-budget', travelGuide.budgetBreakdown, '预算明细生成完成');
+          progressManager.completeStep('generate-budget', travelGuide.budget_breakdown, '预算明细生成完成');
         }
-
-        return travelGuide;
-      }
-    } catch (error) {
-      console.error('Error parsing JSON response:', error);
-      console.log('Raw response that failed to parse:', content);
-    }
-
-    // 如果JSON解析失败，使用基础模板
-    console.warn('Using fallback basic travel guide');
-    return this.generateBasicTravelGuideFromPrompt(originalPrompt);
-  }
-
-  private async parseAIResponseToTravelGuide(content: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string): Promise<TravelGuide> {
-    try {
-      // 尝试解析JSON响应，使用更健壮的方法
-      let jsonString = '';
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonString = jsonMatch[0]
-          .replace(/,(\s*[}\]])/g, '$1') // 移除多余的逗号
-          .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // 为键添加引号
-          .trim();
-        const parsedData = JSON.parse(jsonString);
-        
-        // 生成基础的旅行指南结构
-        const travelGuide: TravelGuide = {
-          id: `guide-${Date.now()}`,
-          title: `${this.truncateText(parsedData.destination || 'AI智能推荐', 20)}${parsedData.duration || '5天4夜'}攻略`,
-          destination: this.truncateText(parsedData.destination || "AI智能推荐目的地", 20),
-          duration: parsedData.duration || "5天4夜",
-          budget: this.truncateText(parsedData.budget || "待确认预算范围", 20),
-          overview: this.truncateText(parsedData.overview || "这是一份由AI智能生成的个性化旅行指南，为您提供全面的旅行规划建议，包含详细行程安排", 100),
-          highlights: Array.isArray(parsedData.highlights) ? parsedData.highlights.map((h: string) => this.truncateText(h, 30)) : ['AI个性化智能推荐', '专业智能行程规划', '实用旅行建议指导'],
-          itinerary: await this.extractItineraryFromAI(content, parsedData.duration || "5天4夜", originalPrompt, xiaohongshuInsights, transportationMode),
-          mapLocations: await this.generateImportantLocations(parsedData.destination || "未知目的地", originalPrompt),
-          budgetBreakdown: await this.generateBudgetBreakdown(parsedData.budget || "待确认预算范围", parsedData.destination || "未知目的地", parsedData.duration || "5天4夜", originalPrompt),
-          tips: Array.isArray(parsedData.tips) ? parsedData.tips.map((t: string) => this.truncateText(t, 30)) : ['出行前请仔细检查签证要求和有效期', '建议购买合适的旅行保险保障安全', '密切关注当地天气变化情况'],
-          createdAt: new Date().toISOString(),
-        };
 
         return travelGuide;
       }
@@ -416,7 +218,6 @@ ${xiaohongshuInsights}
   private async generateBasicTravelGuideFromPrompt(prompt: string): Promise<TravelGuide> {
     try {
       const travelGuide: TravelGuide = {
-        id: `guide-${Date.now()}`,
         title: "AI智能旅行攻略",
         destination: "待确认",
         duration: "5天4夜",
@@ -424,10 +225,9 @@ ${xiaohongshuInsights}
         overview: "请提供更详细需求，生成精准旅行指南",
         highlights: ['AI个性化智能推荐', '专业智能行程规划', '实用旅行建议指导'],
         itinerary: await this.extractItineraryFromAI(prompt, "5天4夜", prompt),
-        mapLocations: await this.generateImportantLocations("待分析", prompt),
-        budgetBreakdown: await this.generateBudgetBreakdown("待确认预算", "待分析", "5天4夜", prompt),
+        map_locations: await this.generateImportantLocations("待分析", prompt),
+        budget_breakdown: await this.generateBudgetBreakdown("待确认预算", "待分析", "5天4夜", prompt),
         tips: ['出行前请仔细检查签证要求', '建议购买合适的旅行保险', '密切关注当地天气变化'],
-        createdAt: new Date().toISOString(),
       };
 
       return travelGuide;
@@ -467,7 +267,7 @@ ${xiaohongshuInsights}
 
       const transportMode = response.text?.trim() || '综合交通';
       return transportMode;
-      
+
     } catch (error) {
       console.error('Error identifying transportation mode:', error);
       return '综合交通'; // 默认交通方式
@@ -494,19 +294,46 @@ ${xiaohongshuInsights}
 
       const keyword = response.text?.trim() || '';
       return keyword;
-      
+
     } catch (error) {
       console.error('Error extracting keyword:', error);
       return '旅行攻略'; // 默认关键词
     }
   }
 
+  private async extractBudgetFromPrompt(prompt: string): Promise<string | null> {
+    try {
+      const budgetPrompt = `从以下用户旅行需求中提取预算相关信息：
+
+用户需求："${prompt}"
+
+请分析用户是否提到了预算、费用、价格等相关信息。如果提到了，请提取具体的预算金额或预算范围。
+如果没有提到预算信息，请返回"未指定预算"。
+
+只返回预算信息，不要其他文字。例如："5000元"、"1-2万"、"经济型"、"高端奢华"等。`;
+
+      const response = await aiModel.doGenerate({
+        inputFormat: 'prompt',
+        mode: { type: 'regular' },
+        prompt: [{ role: 'user', content: [{ type: 'text', text: budgetPrompt }] }],
+        maxTokens: 100,
+      });
+
+      const budget = response.text?.trim() || '';
+      return budget === '未指定预算' ? null : budget;
+
+    } catch (error) {
+      console.error('Error extracting budget:', error);
+      return null;
+    }
+  }
+
   private async getXiaohongshuInsights(keyword: string): Promise<string> {
     try {
       if (!keyword) return '';
-      
+
       const notes = this.xiaohongshu.getNotesByKeyword(keyword);
-      
+
       if (notes.length === 0) return '';
 
       // 取前5条笔记进行分析，避免内容过多
@@ -536,7 +363,7 @@ ${notesContent}
 
       const insights = response.text || '';
       return insights;
-      
+
     } catch (error) {
       console.error('Error getting XiaoHongShu insights:', error);
       return '';
@@ -545,7 +372,7 @@ ${notesContent}
 
   private async extractItineraryFromAI(content: string, duration: string, originalPrompt: string, xiaohongshuInsights?: string, transportationMode?: string): Promise<any[]> {
     const days = parseInt(duration.match(/(\d+)天/)?.[1] || '5');
-    
+
     // 使用简化的prompt生成详细行程
     const itineraryPrompt = `生成${days}天旅行行程JSON：
 
@@ -612,12 +439,12 @@ ${notesContent}
   private parseJSONItineraryResponse(aiResponse: string, days: number): any[] {
     // 多种方式尝试提取JSON
     let jsonString = '';
-    
+
     // 方法1: 匹配完整的JSON对象
     const fullJsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     if (fullJsonMatch) {
       jsonString = fullJsonMatch[0];
-      
+
       // 尝试修复常见的JSON格式问题
       jsonString = jsonString
         .replace(/,(\s*[}\]])/g, '$1') // 移除多余的逗号
@@ -631,7 +458,7 @@ ${notesContent}
         })
         .trim();
     }
-    
+
     // 方法2: 如果找不到完整JSON，尝试寻找days数组
     if (!jsonString) {
       const daysMatch = aiResponse.match(/"days"\s*:\s*\[[\s\S]*\]/);
@@ -639,15 +466,15 @@ ${notesContent}
         jsonString = `{${daysMatch[0]}}`;
       }
     }
-    
+
     if (jsonString) {
       const parsedData = JSON.parse(jsonString);
-      
+
       if (parsedData.days && Array.isArray(parsedData.days)) {
         return parsedData.days;
       }
     }
-    
+
     throw new Error('Failed to parse JSON response');
   }
 
@@ -687,7 +514,7 @@ ${notesContent}
       const aiResponse = response.text || '';
       const locations = await this.parseJSONLocationsResponse(aiResponse, destination);
       return locations;
-      
+
     } catch (error) {
       console.error('Error generating important locations:', error);
       return await this.generateBasicLocations(destination);
@@ -706,10 +533,10 @@ ${notesContent}
           return locationsWithCoordinates;
         }
       }
-      
+
       console.warn('Failed to parse JSON locations, using fallback');
       return await this.generateBasicLocations(destination);
-      
+
     } catch (error) {
       console.error('Error parsing JSON locations:', error);
       return await this.generateBasicLocations(destination);
@@ -718,10 +545,10 @@ ${notesContent}
 
   private async enrichLocationsWithCoordinates(locations: any[], destination: string): Promise<any[]> {
     const enrichedLocations = [];
-    
+
     for (const location of locations) {
       const enrichedLocation = { ...location };
-      
+
       // 如果没有坐标，尝试通过地理编码获取
       if (!location.coordinates) {
         try {
@@ -736,10 +563,10 @@ ${notesContent}
           console.error(`获取 ${location.name} 坐标失败:`, error);
         }
       }
-      
+
       enrichedLocations.push(enrichedLocation);
     }
-    
+
     return enrichedLocations;
   }
 
@@ -753,7 +580,7 @@ ${notesContent}
       },
       {
         name: `${destination}特色餐厅`,
-        type: "restaurant", 
+        type: "restaurant",
         description: "AI推荐的当地特色美食",
         day: 1
       },
@@ -777,6 +604,8 @@ ${notesContent}
 用户需求：${originalPrompt}
 总预算：${budget}
 
+${budget !== '待确认预算范围' ? `请严格按照用户预算${budget}来分配各项费用，确保总费用不超过预算范围。` : '请基于目的地消费水平提供合理的预算分配建议。'}
+
 返回JSON格式：
 {
   "breakdown": [
@@ -784,38 +613,44 @@ ${notesContent}
       "category": "交通费用",
       "amount": 数字,
       "percentage": 百分比数字,
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "description": "包含往返交通、当地交通等费用"
     },
     {
       "category": "住宿费用", 
       "amount": 数字,
       "percentage": 百分比数字,
-      "color": "#8b5cf6"
+      "color": "#8b5cf6",
+      "description": "根据预算选择合适的住宿档次"
     },
     {
       "category": "餐饮费用",
       "amount": 数字,
       "percentage": 百分比数字,
-      "color": "#10b981"
+      "color": "#10b981",
+      "description": "当地特色美食和日常餐饮"
     },
     {
       "category": "门票娱乐",
       "amount": 数字,
       "percentage": 百分比数字,
-      "color": "#f59e0b"
+      "color": "#f59e0b",
+      "description": "景点门票、娱乐活动等"
     },
     {
       "category": "购物其他",
       "amount": 数字,
       "percentage": 百分比数字,
-      "color": "#ef4444"
+      "color": "#ef4444",
+      "description": "纪念品、意外支出等"
     }
   ]
 }
 
 要求：
 - 5个分类的百分比总和必须等于100
-- 金额要合理，符合目的地消费水平
+- ${budget !== '待确认预算范围' ? `严格按照用户预算${budget}分配，总费用不能超过预算` : '金额要合理，符合目的地消费水平'}
+- 考虑目的地消费水平和旅行天数
 - 只返回JSON，无其他文字`;
 
       const response = await aiModel.doGenerate({
@@ -827,7 +662,7 @@ ${notesContent}
 
       const aiBudget = response.text || '';
       return this.parseBudgetResponse(aiBudget);
-      
+
     } catch (error) {
       console.error('Error generating budget breakdown:', error);
       return this.generateBasicBudget();
@@ -843,16 +678,16 @@ ${notesContent}
           .replace(/,(\s*[}\]])/g, '$1') // 移除多余的逗号
           .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // 为键添加引号
           .trim();
-        
+
         const parsedData = JSON.parse(jsonString);
         if (parsedData.breakdown && Array.isArray(parsedData.breakdown)) {
           return parsedData.breakdown;
         }
       }
-      
+
       console.warn('Failed to parse budget JSON, using fallback');
       return this.generateBasicBudget();
-      
+
     } catch (error) {
       console.error('Error parsing budget JSON:', error);
       return this.generateBasicBudget();
@@ -869,37 +704,6 @@ ${notesContent}
     ];
   }
 
-  public async generateTravelGuide(input: TravelRequest): Promise<TravelGuide> {
-    try {
-      // 构建prompt并生成旅行指南
-      const prompt = `为${input.destination}制定${input.duration}旅行计划，预算${input.budget}，兴趣：${input.interests.join('、')}`;
-      
-      return await this.generateTravelGuideFromPrompt(prompt);
-    } catch (error) {
-      console.error('Error generating travel guide:', error);
-      
-      // 如果生成失败，使用基础方法
-      const title = this.generateTitle(input.destination, input.duration, input.interests);
-      const fallbackPrompt = `为${input.destination}制定${input.duration}旅行计划，预算${input.budget}，兴趣：${input.interests.join('、')}`;
-      
-      const travelGuide: TravelGuide = {
-        id: `guide-${Date.now()}`,
-        title,
-        destination: input.destination,
-        duration: input.duration,
-        budget: input.budget,
-        overview: `为${input.destination}${input.duration}旅行精心制作的个性化指南`,
-        highlights: ['个性化智能推荐', '专业行程规划', '实用旅行建议'],
-        itinerary: await this.extractItineraryFromAI(`为${input.destination}制定${input.duration}旅行计划`, input.duration, fallbackPrompt),
-        mapLocations: await this.generateImportantLocations(input.destination, fallbackPrompt),
-        budgetBreakdown: await this.generateBudgetBreakdown(input.budget, input.destination, input.duration, fallbackPrompt),
-        tips: ['出行前请检查签证要求', '建议购买旅行保险', '关注当地天气变化'],
-        createdAt: new Date().toISOString(),
-      };
-
-      return travelGuide;
-    }
-  }
 
   private generateTitle(destination: string, duration: string, interests: string[]): string {
     const interestStr = interests.length > 0 ? ` - ${interests.slice(0, 2).join('+')}` : '';
@@ -911,7 +715,7 @@ ${notesContent}
   }
 
   // === Mastra增强功能 ===
-  
+
   async optimizeItinerary(request: {
     destination: string;
     currentItinerary: any[];
@@ -1023,7 +827,7 @@ ${notesContent}
       preferences,
       lastUpdated: new Date().toISOString(),
     };
-    
+
     // 在实际应用中，这里会使用Mastra的持久化存储
     console.log('User preferences saved:', userMemory);
     return userMemory;

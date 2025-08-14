@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { TravelGuide as BaseTravelGuide } from './mock-data'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_key'
@@ -40,71 +41,12 @@ export interface UpdateProfileData {
 }
 
 // 数据库表类型定义
-export interface TravelGuide {
+export interface SupabaseTravelGuide extends BaseTravelGuide {
   id?: string
   created_at?: string
-  prompt: string
-  destination: string
-  duration: string
-  budget: string
-  overview: string
-  highlights: string[]
-  tips: string[]
-  itinerary: DayPlan[]
-  map_locations: MapLocation[]
-  budget_breakdown: BudgetItem[]
-  transportation: string
   user_id?: string
   is_public?: boolean
+  prompt: string
+  transportation: string
 }
 
-export interface DayPlan {
-  day: number
-  activities: Activity[]
-  meals: Meal[]
-  accommodation?: string
-}
-
-export interface Activity {
-  name: string
-  description: string
-  time: string
-  location: string
-  cost?: number
-  transportation?: {
-    mode: string
-    route: string
-    duration: string
-    cost: number
-  }
-}
-
-export interface Meal {
-  name: string
-  description: string
-  time: string
-  location: string
-  cost?: number
-  transportation?: {
-    mode: string
-    route: string
-    duration: string
-    cost: number
-  }
-}
-
-export interface MapLocation {
-  name: string
-  type: 'attraction' | 'restaurant' | 'hotel'
-  day: number
-  description?: string
-  coordinates?: [number, number]
-}
-
-export interface BudgetItem {
-  category: string
-  amount: number
-  percentage: number
-  color: string
-  description?: string
-}
