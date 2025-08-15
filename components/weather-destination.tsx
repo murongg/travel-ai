@@ -112,7 +112,7 @@ export function WeatherDestination({ destination, itinerary, weatherInfo }: Weat
     )
   }
 
-  if (!weather) {
+  if (!weather || !weather.current) {
     return null
   }
 
@@ -129,26 +129,30 @@ export function WeatherDestination({ destination, itinerary, weatherInfo }: Weat
         {/* Current Weather */}
         <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border">
           <div className="flex items-center justify-center gap-3 mb-3">
-            {getWeatherIcon(weather.current.condition)}
-            <div className="text-3xl font-bold text-blue-600">{weather.current.temperature}°C</div>
+            {getWeatherIcon(weather.current.condition || '未知')}
+            <div className="text-3xl font-bold text-blue-600">
+              {weather.current.temperature || '--'}°C
+            </div>
           </div>
-          <div className="text-lg font-medium text-gray-700 mb-3">{weather.current.condition}</div>
+          <div className="text-lg font-medium text-gray-700 mb-3">
+            {weather.current.condition || '天气信息获取中...'}
+          </div>
 
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div className="flex flex-col items-center gap-1">
               <Droplets className="w-4 h-4 text-blue-500" />
               <span className="text-xs text-gray-600">湿度</span>
-              <span className="font-medium">{weather.current.humidity}%</span>
+              <span className="font-medium">{weather.current.humidity || '--'}%</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Wind className="w-4 h-4 text-gray-500" />
               <span className="text-xs text-gray-600">风力</span>
-              <span className="font-medium">{weather.current.windSpeed}级</span>
+              <span className="font-medium">{weather.current.windSpeed || '--'}级</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Eye className="w-4 h-4 text-green-500" />
               <span className="text-xs text-gray-600">风向</span>
-              <span className="font-medium">{weather.current.windDirection}</span>
+              <span className="font-medium">{weather.current.windDirection || '--'}</span>
             </div>
           </div>
           
@@ -160,31 +164,35 @@ export function WeatherDestination({ destination, itinerary, weatherInfo }: Weat
         </div>
 
         {/* 3-Day Forecast */}
-        <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-gray-700">3天预报</h4>
+        {weather.forecast && Array.isArray(weather.forecast) && weather.forecast.length > 0 && (
           <div className="space-y-2">
-                            {weather.forecast.slice(0, 3).map((day, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium w-12 text-gray-700">{day.readableDate}</span>
-                      {getWeatherIcon(day.dayWeather)}
-                      <div className="text-xs text-gray-600">
-                        <div>{day.dayWeather}</div>
-                        <div>转{day.nightWeather}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-700">
-                        {day.dayTemp}° ~ {day.nightTemp}°
-                      </div>
-                      <Badge variant="outline" className="text-xs mt-1">
-                        {day.week}
-                      </Badge>
+            <h4 className="font-semibold text-sm text-gray-700">3天预报</h4>
+            <div className="space-y-2">
+              {weather.forecast.slice(0, 3).map((day, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium w-12 text-gray-700">
+                      {day.readableDate || `第${index + 1}天`}
+                    </span>
+                    {getWeatherIcon(day.dayWeather || '未知')}
+                    <div className="text-xs text-gray-600">
+                      <div>{day.dayWeather || '天气信息获取中'}</div>
+                      <div>转{day.nightWeather || '天气信息获取中'}</div>
                     </div>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700">
+                      {day.dayTemp || '--'}° ~ {day.nightTemp || '--'}°
+                    </div>
+                    <Badge variant="outline" className="text-xs mt-1">
+                      {day.week || '未知'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Weather Advice */}
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">

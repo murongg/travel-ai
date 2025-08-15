@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { travelAgent } from '@/lib/mastra/travel-agent';
+import { langChainTravelAgent } from '@/lib/langchain/travel-agent';
 import { ProgressManager, ProgressStep } from '@/lib/progress-manager';
 
 export async function POST(request: NextRequest) {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
         try {
           // 开始生成旅行指南
-          const travelGuide = await travelAgent.generateTravelGuideWithProgress(prompt, progressManager);
+          const travelGuide = await langChainTravelAgent.generateTravelGuideWithProgress(prompt, progressManager);
           
           // 发送最终结果
           const finalData = JSON.stringify({ 

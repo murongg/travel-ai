@@ -16,6 +16,7 @@ import { WeatherDestination } from "@/components/weather-destination"
 import { RoutePlanner } from "@/components/route-planner"
 import { RouteMap } from "@/components/route-map"
 import { DailyRoutePlan } from "@/lib/services/amap-service-server"
+import AmapTravelMap from "@/components/amap-travel-map"
 
 export default function ResultPage() {
   const searchParams = useSearchParams()
@@ -370,11 +371,11 @@ export default function ResultPage() {
                 </CardContent>
               </Card>
 
-              {/* Route Planning */}
+              {/* AI Route Planning */}
               <Card className="animate-in slide-in-from-left-4 duration-700 delay-700 hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    🗺️ 高德地图导航
+                    🤖 AI智能路线规划
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -385,6 +386,23 @@ export default function ResultPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* 3D Travel Map */}
+              {dailyRoutes && dailyRoutes.length > 0 && (
+                <Card className="animate-in slide-in-from-left-4 duration-700 delay-800 hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      🗺️ 3D行程地图
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <AmapTravelMap
+                      dailyRoutes={dailyRoutes}
+                      destination={guide.destination}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
 
             </div>
@@ -404,6 +422,30 @@ export default function ResultPage() {
               <div className="animate-in slide-in-from-right-4 duration-700 delay-500">
                 <TravelMap locations={map_locations} destination={guide.destination} />
               </div>
+
+              {/* AI Route Status */}
+              {dailyRoutes && dailyRoutes.length > 0 && (
+                <div className="animate-in slide-in-from-right-4 duration-700 delay-600">
+                  <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+                        🤖 AI路线已生成
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-blue-600">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span>已生成 {dailyRoutes.length} 天的路线规划</span>
+                        </div>
+                        <div className="text-xs text-blue-500">
+                          点击下方"3D行程地图"查看详细路线
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {/* Guide Actions */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-700">
