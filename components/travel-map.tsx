@@ -131,14 +131,6 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
     }
   }
 
-  const addLegend = (dailyLocations: Array<{ day: number; locations: Activity[] }>) => {
-    dailyLocations.forEach(day => {
-      day.locations.forEach(location => {
-        console.log('location', location)
-      })
-    })
-  }
-
   // 处理地点坐标（现在由AI接口直接提供）
   useEffect(() => {
     const processLocations = async () => {
