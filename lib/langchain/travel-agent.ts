@@ -798,13 +798,12 @@ export class LangChainTravelAgent {
     try {
       if (!keyword) return '';
 
-      const notes = this.xiaohongshu.getNotesByKeyword(keyword);
+      const notes = await this.xiaohongshu.getNotesByKeyword(keyword);
 
       if (notes.length === 0) return '';
 
       // 取前5条笔记进行分析，避免内容过多
-      const selectedNotes = notes.slice(0, 5);
-      const notesContent = selectedNotes.join('\n\n---\n\n');
+      const notesContent = notes.join('\n\n---\n\n');
 
       // 使用LangChain分析小红书内容
       const analysisPrompt = PromptTemplate.fromTemplate(`

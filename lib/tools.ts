@@ -14,24 +14,6 @@ export interface PackingList {
   tripType: string
   items: PackingItem[]
 }
-
-export interface ExpenseItem {
-  id: string
-  category: string
-  description: string
-  amount: number
-  currency: string
-  date: Date
-  location?: string
-}
-
-export interface Budget {
-  category: string
-  planned: number
-  actual: number
-  currency: string
-}
-
 export interface WeatherInfo {
   location?: string
   current: {
@@ -59,13 +41,6 @@ export interface WeatherInfo {
   startDate?: string
   endDate?: string
   duration?: number
-}
-
-export interface ExchangeRate {
-  from: string
-  to: string
-  rate: number
-  lastUpdated: Date
 }
 
 export const toolsService = {
@@ -102,11 +77,11 @@ export const toolsService = {
       const params = new URLSearchParams({
         city: location
       });
-      
+
       if (startDate) {
         params.append('startDate', startDate);
       }
-      
+
       if (duration) {
         params.append('duration', duration.toString());
       }
@@ -118,7 +93,7 @@ export const toolsService = {
       }
 
       const data = await response.json()
-      
+
       if (!data.success) {
         throw new Error(data.error || "获取天气信息失败")
       }
@@ -126,7 +101,7 @@ export const toolsService = {
       // 解析天气建议文本，提取结构化数据
       const weatherAdvice = data.data.weatherAdvice
       const lines = weatherAdvice.split('\n')
-      
+
       // 提取当前天气信息
       const current: WeatherInfo['current'] = {
         temperature: '',
@@ -155,7 +130,7 @@ export const toolsService = {
 
       // 提取预报信息（支持日期和行程天数）
       const forecast: WeatherInfo['forecast'] = []
-      
+
       lines.forEach((line: string) => {
         // 支持多种日期格式：今天、明天、后天，或者具体的日期
         if (line.includes('：') && (line.includes('转') || line.includes('°C'))) {
@@ -163,18 +138,18 @@ export const toolsService = {
           if (parts.length >= 2) {
             const dayLabel = parts[0]
             const weatherInfo = parts[1]
-            
+
             // 解析天气信息
             let dayWeather = '';
             let nightWeather = '';
             let dayTemp = '';
             let nightTemp = '';
-            
+
             if (weatherInfo.includes('转')) {
               const [day, temp] = weatherInfo.split('，')
               dayWeather = day || '';
               nightWeather = day.includes('转') ? day.split('转')[1] : day;
-              
+
               if (temp && temp.includes('°C')) {
                 const tempParts = temp.split('°C')
                 dayTemp = tempParts[0] || '';
@@ -183,7 +158,7 @@ export const toolsService = {
             } else {
               dayWeather = weatherInfo;
             }
-            
+
             const currentForecast = {
               date: dayLabel,
               readableDate: dayLabel,
@@ -197,7 +172,7 @@ export const toolsService = {
               dayPower: '',
               nightPower: ''
             }
-            
+
             forecast.push(currentForecast)
           }
         }
@@ -211,128 +186,6 @@ export const toolsService = {
       }
     } catch (error) {
       console.error("Error fetching weather info:", error)
-      throw error
-    }
-  },
-
-  getExchangeRates: async (baseCurrency: string): Promise<ExchangeRate[]> => {
-    try {
-      const response = await fetch(`/api/tools/currency?base=${baseCurrency}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch exchange rates")
-      }
-
-      const data = await response.json()
-      // Convert date strings back to Date objects
-      return data.rates.map((rate: any) => ({
-        ...rate,
-        lastUpdated: new Date(rate.lastUpdated),
-      }))
-    } catch (error) {
-      console.error("Error fetching exchange rates:", error)
-      throw error
-    }
-  },
-
-  saveBudget: async (budgets: Budget[]): Promise<void> => {
-    try {
-      const response = await fetch("/api/tools/expenses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({ type: "budget", data: budgets }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to save budget")
-      }
-    } catch (error) {
-      console.error("Error saving budget:", error)
-      // Fallback to localStorage
-      localStorage.setItem("travel-budget", JSON.stringify(budgets))
-    }
-  },
-
-  loadBudget: async (): Promise<Budget[]> => {
-    try {
-      const response = await fetch("/api/tools/expenses?type=budget", {
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to load budget")
-      }
-
-      const data = await response.json()
-      return data.budget || []
-    } catch (error) {
-      console.error("Error loading budget:", error)
-      // Fallback to localStorage
-      const saved = localStorage.getItem("travel-budget")
-      return saved ? JSON.parse(saved) : []
-    }
-  },
-
-  saveExpense: async (expense: ExpenseItem): Promise<void> => {
-    try {
-      const response = await fetch("/api/tools/expenses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({ type: "expense", data: expense }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to save expense")
-      }
-    } catch (error) {
-      console.error("Error saving expense:", error)
-      // Fallback to localStorage
-      const expenses = await toolsService.loadExpenses()
-      expenses.push(expense)
-      localStorage.setItem("travel-expenses", JSON.stringify(expenses))
-    }
-  },
-
-  loadExpenses: async (): Promise<ExpenseItem[]> => {
-    try {
-      const response = await fetch("/api/tools/expenses?type=expenses", {
-        headers: getAuthHeaders(),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to load expenses")
-      }
-
-      const data = await response.json()
-      return data.expenses.map((e: any) => ({ ...e, date: new Date(e.date) })) || []
-    } catch (error) {
-      console.error("Error loading expenses:", error)
-      // Fallback to localStorage
-      const saved = localStorage.getItem("travel-expenses")
-      return saved ? JSON.parse(saved).map((e: any) => ({ ...e, date: new Date(e.date) })) : []
-    }
-  },
-
-  getFlightInfo: async (from: string, to: string, date: string): Promise<any> => {
-    try {
-      const response = await fetch(
-        `/api/tools/flights?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${date}`,
-      )
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch flight info")
-      }
-
-      const data = await response.json()
-      return data.flights
-    } catch (error) {
-      console.error("Error fetching flight info:", error)
       throw error
     }
   },

@@ -6,8 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start",
-    "test:langchain": "tsx lib/langchain/test.ts"
+    "start": "next start"
   },
   "dependencies": {
     "@ai-sdk/openai": "1.3",

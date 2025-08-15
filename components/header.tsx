@@ -19,11 +19,6 @@ export function Header() {
 
         <nav className="hidden md:flex items-center space-x-6">
           <a href="/" className="text-muted-foreground hover:text-foreground transition-colors">首页</a>
-          <a href="/templates" className="text-muted-foreground hover:text-foreground transition-colors">攻略模板</a>
-          <a href="/community" className="text-muted-foreground hover:text-foreground transition-colors">社区</a>
-          <a href="/tools" className="text-muted-foreground hover:text-foreground transition-colors">实用工具</a>
-          <a href="/enhanced" className="text-muted-foreground hover:text-foreground transition-colors">技术增强</a>
-          <a href="/database" className="text-muted-foreground hover:text-foreground transition-colors">数据库</a>
         </nav>
 
         <div className="flex items-center space-x-4">

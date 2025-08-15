@@ -35,16 +35,15 @@ export class GetXiaohongshuNotesTool extends BaseMCPTool {
   protected async _call(input: any): Promise<string> {
     try {
       const { keyword, limit = 5 } = input;
-      const notes = this.xiaohongshu.getNotesByKeyword(keyword);
-      const limitedNotes = notes.slice(0, limit);
+      const notes = await this.xiaohongshu.getNotesByKeyword(keyword);
       
       return JSON.stringify({
         success: true,
         data: {
           keyword,
           totalFound: notes.length,
-          returned: limitedNotes.length,
-          notes: limitedNotes
+          returned: notes.length,
+          notes: notes
         }
       });
     } catch (error) {
