@@ -71,6 +71,7 @@ export interface Activity {
   duration: string
   cost: string
   tips?: string
+  coordinates?: [number, number] // [lng, lat] 高德地图格式
 }
 
 export interface Meal {

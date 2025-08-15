@@ -45,6 +45,10 @@ const ItinerarySchema = z.object({
       description: z.string(),
       duration: z.string(),
       cost: z.string(),
+      coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+      formattedAddress: z.string().optional(),
+      city: z.string().optional(),
+      district: z.string().optional(),
       transportation: z.object({
         from: z.string(),
         to: z.string(),
@@ -61,6 +65,10 @@ const ItinerarySchema = z.object({
       location: z.string(),
       cost: z.string(),
       description: z.string(),
+      coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+      formattedAddress: z.string().optional(),
+      city: z.string().optional(),
+      district: z.string().optional(),
       transportation: z.object({
         from: z.string(),
         to: z.string(),
@@ -79,7 +87,11 @@ const LocationsSchema = z.object({
     name: z.string().max(15),
     type: z.enum(["attraction", "restaurant", "hotel"]),
     description: z.string().max(40),
-    day: z.number()
+    day: z.number(),
+    coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+    formattedAddress: z.string().optional(),
+    city: z.string().optional(),
+    district: z.string().optional()
   }))
 });
 
@@ -679,7 +691,13 @@ export class LangChainTravelAgent {
         xiaohongshuInsights: xiaohongshuInsights || '无',
         formatInstructions
       });
-      return result.days || [];
+      
+      const itinerary = result.days || [];
+      
+      // 为行程中的每个地点获取坐标
+      const enrichedItinerary = await this.enrichItineraryWithCoordinates(itinerary, originalPrompt);
+      
+      return enrichedItinerary;
     } catch (error) {
       console.error('Error generating itinerary with LangChain:', error);
       return [];
@@ -972,6 +990,84 @@ export class LangChainTravelAgent {
     }
 
     return enrichedLocations;
+  }
+
+  /**
+   * 为行程中的每个地点获取坐标信息
+   */
+  private async enrichItineraryWithCoordinates(itinerary: any[], destination: string): Promise<any[]> {
+    const enrichedItinerary = [];
+
+    for (const day of itinerary) {
+      const enrichedDay = { ...day };
+      
+      // 为活动获取坐标
+      if (day.activities && Array.isArray(day.activities)) {
+        enrichedDay.activities = await Promise.all(
+          day.activities.map(async (activity: any) => {
+            const enrichedActivity = { ...activity };
+            
+            if (activity.location && !activity.coordinates) {
+              try {
+                console.log(`📍 正在获取活动地点坐标: ${activity.location}`);
+                const result = await amapServiceServer.smartGeocode(activity.location, destination);
+                if (result && result.coordinates) {
+                  enrichedActivity.coordinates = result.coordinates;
+                  enrichedActivity.formattedAddress = result.formatted_address;
+                  enrichedActivity.city = result.city;
+                  enrichedActivity.district = result.district;
+                  console.log(`✅ 成功获取 ${activity.location} 的坐标:`, result.coordinates);
+                } else {
+                  console.warn(`⚠️ 无法获取 ${activity.location} 的坐标`);
+                  enrichedActivity.coordinates = null;
+                }
+              } catch (error) {
+                console.error(`❌ 获取 ${activity.location} 坐标失败:`, error);
+                enrichedActivity.coordinates = null;
+              }
+            }
+            
+            return enrichedActivity;
+          })
+        );
+      }
+      
+      // 为餐饮获取坐标
+      if (day.meals && Array.isArray(day.meals)) {
+        enrichedDay.meals = await Promise.all(
+          day.meals.map(async (meal: any) => {
+            const enrichedMeal = { ...meal };
+            
+            if (meal.location && !meal.coordinates) {
+              try {
+                console.log(`📍 正在获取餐厅坐标: ${meal.location}`);
+                const result = await amapServiceServer.smartGeocode(meal.location, destination);
+                if (result && result.coordinates) {
+                  enrichedMeal.coordinates = result.coordinates;
+                  enrichedMeal.formattedAddress = result.formatted_address;
+                  enrichedMeal.city = result.city;
+                  enrichedMeal.district = result.district;
+                  console.log(`✅ 成功获取 ${meal.location} 的坐标:`, result.coordinates);
+                } else {
+                  console.warn(`⚠️ 无法获取 ${meal.location} 的坐标`);
+                  enrichedMeal.coordinates = null;
+                }
+              } catch (error) {
+                console.error(`❌ 获取 ${meal.location} 坐标失败:`, error);
+                enrichedMeal.coordinates = null;
+              }
+            }
+            
+            return enrichedMeal;
+          })
+        );
+      }
+      
+      enrichedItinerary.push(enrichedDay);
+    }
+
+    console.log(`🎯 行程坐标获取完成，共处理 ${enrichedItinerary.length} 天`);
+    return enrichedItinerary;
   }
 
   private async generateBasicLocations(destination: string): Promise<any[]> {

@@ -14,9 +14,6 @@ import { LoadingSkeleton } from "@/components/loading-skeleton"
 import { FirebaseTravelGuide } from "@/lib/firebase"
 import { WeatherDestination } from "@/components/weather-destination"
 import { RoutePlanner } from "@/components/route-planner"
-import { RouteMap } from "@/components/route-map"
-import { DailyRoutePlan } from "@/lib/services/amap-service-server"
-import AmapTravelMap from "@/components/amap-travel-map"
 
 export default function ResultPage() {
   const searchParams = useSearchParams()
@@ -55,6 +52,7 @@ export default function ResultPage() {
         }
       });
 
+
       // 提取餐厅
       dayPlan.meals?.forEach((meal) => {
         if (meal.name && meal.location) {
@@ -67,8 +65,26 @@ export default function ResultPage() {
       });
     });
 
+
     return locations;
   }, [guide])
+
+  const dailyLocations = useMemo(() => {
+    if (!guide) return [];
+    return [
+      ...guide.itinerary.map(dayPlan => ({
+        day: dayPlan.day,
+        locations: [
+          ...dayPlan.activities,
+          ...dayPlan.meals,
+        ]
+      })),
+    ];
+  }, [guide])
+
+  useEffect(() => {
+    console.log('dailyLocations', dailyLocations)
+  }, [dailyLocations])
 
   useEffect(() => {
     const guideId = searchParams.get("guideId")
@@ -371,38 +387,6 @@ export default function ResultPage() {
                 </CardContent>
               </Card>
 
-              {/* AI Route Planning */}
-              <Card className="animate-in slide-in-from-left-4 duration-700 delay-700 hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    🤖 AI智能路线规划
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RoutePlanner 
-                    itinerary={guide.itinerary} 
-                    destination={guide.destination}
-                    onRouteGenerated={setDailyRoutes}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* 3D Travel Map */}
-              {dailyRoutes && dailyRoutes.length > 0 && (
-                <Card className="animate-in slide-in-from-left-4 duration-700 delay-800 hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      🗺️ 3D行程地图
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AmapTravelMap
-                      dailyRoutes={dailyRoutes}
-                      destination={guide.destination}
-                    />
-                  </CardContent>
-                </Card>
-              )}
 
 
             </div>
@@ -420,7 +404,11 @@ export default function ResultPage() {
 
               {/* Travel Map */}
               <div className="animate-in slide-in-from-right-4 duration-700 delay-500">
-                <TravelMap locations={map_locations} destination={guide.destination} />
+                <TravelMap
+                  locations={map_locations}
+                  destination={guide.destination}
+                  dailyLocations={dailyLocations}
+                />
               </div>
 
               {/* AI Route Status */}

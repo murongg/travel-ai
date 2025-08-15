@@ -4,6 +4,7 @@ import { MapPin, Navigation, Loader2 } from "lucide-react"
 import { useEffect, useState } from 'react'
 import { amapService } from '@/lib/services/amap-service'
 import dynamic from 'next/dynamic';
+import { Activity, Meal } from "@/lib/mock-data"
 
 // 动态导入地图组件以避免SSR问题
 const Map = dynamic(() => import('@uiw/react-amap').then(mod => mod.Map), {
@@ -11,6 +12,9 @@ const Map = dynamic(() => import('@uiw/react-amap').then(mod => mod.Map), {
   loading: () => <div className="flex items-center justify-center h-full">地图加载中...</div>
 });
 const Marker = dynamic(() => import('@uiw/react-amap').then(mod => mod.Marker), {
+  ssr: false
+});
+const Polyline = dynamic(() => import('@uiw/react-amap').then(mod => mod.Polyline), {
   ssr: false
 });
 const APILoader = dynamic(() => import('@uiw/react-amap').then(mod => mod.APILoader), {
@@ -29,6 +33,7 @@ interface MapLocation {
 interface TravelMapProps {
   locations: MapLocation[]
   destination: string
+  dailyLocations: Array<{ day: number; locations: (Activity | Meal)[] }>
 }
 
 interface EnhancedMapLocation extends MapLocation {
@@ -36,13 +41,52 @@ interface EnhancedMapLocation extends MapLocation {
   geocodingStatus?: 'pending' | 'success' | 'failed';
 }
 
-
-
-export function TravelMap({ locations, destination }: TravelMapProps) {
+export function TravelMap({ locations, destination, dailyLocations }: TravelMapProps) {
   const [enhancedLocations, setEnhancedLocations] = useState<EnhancedMapLocation[]>([]);
   const [mapCenter, setMapCenter] = useState<[number, number]>([116.397428, 39.90923]);
   const [mapZoom, setMapZoom] = useState<number>(12);
   const [isGeocoding, setIsGeocoding] = useState(true);
+  
+  // 为每天分配不同的颜色
+  const dayColors = [
+    '#3366FF', // 蓝色 - 第1天
+    '#FF6633', // 橙色 - 第2天
+    '#33CC66', // 绿色 - 第3天
+    '#9966FF', // 紫色 - 第4天
+    '#FF6B6B', // 红色 - 第5天
+    '#4ECDC4', // 青色 - 第6天
+    '#45B7D1', // 蓝色 - 第7天
+    '#96CEB4', // 绿色 - 第8天
+    '#FFEAA7', // 黄色 - 第9天
+    '#DDA0DD'  // 紫色 - 第10天
+  ];
+
+  // 生成每天的行程描述
+  const generateDayDescription = (day: number, locations: Activity[]) => {
+    if (!locations || locations.length === 0) {
+      return `第${day}天: 待安排`;
+    }
+    
+    const locationNames = locations.map(loc => loc.name).join('、');
+    return `第${day}天: ${locationNames}`;
+  };
+
+  // 按天分组地点
+  const getLocationsByDay = () => {
+    const dayGroups: { [key: number]: MapLocation[] } = {};
+    
+    locations.forEach(location => {
+      if (location.day && location.coordinates) {
+        if (!dayGroups[location.day]) {
+          dayGroups[location.day] = [];
+        }
+        dayGroups[location.day].push(location);
+      }
+    });
+    
+    return dayGroups;
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case "attraction":
@@ -85,6 +129,14 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
           </div>
         )
     }
+  }
+
+  const addLegend = (dailyLocations: Array<{ day: number; locations: Activity[] }>) => {
+    dailyLocations.forEach(day => {
+      day.locations.forEach(location => {
+        console.log('location', location)
+      })
+    })
   }
 
   // 处理地点坐标（现在由AI接口直接提供）
@@ -182,8 +234,51 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
                   center={mapCenter as any}
                   zoom={mapZoom}
                 >
+                  {/* 渲染每天的路线 */}
+                  {Object.entries(getLocationsByDay()).map(([dayStr, dayLocations], dayIndex) => {
+                    const day = parseInt(dayStr);
+                    const dayColor = dayColors[dayIndex % dayColors.length];
+                    const path = dayLocations.map(loc => loc.coordinates!);
+                    
+                    return (
+                      <div key={`day-${day}`}>
+                        {/* 绘制路线 */}
+                        {path.length > 1 && (
+                          <Polyline
+                            path={path as any}
+                            strokeColor={dayColor}
+                            strokeWeight={5}
+                            strokeStyle="solid"
+                            strokeOpacity={0.9}
+                            zIndex={50}
+                          />
+                        )}
+                        
+                        {/* 渲染当天的标记点 */}
+                        {dayLocations.map((location, index) => (
+                          <Marker
+                            key={`day-${day}-marker-${index}`}
+                            position={location.coordinates as any}
+                          >
+                            <div className="relative">
+                              {getTypeIcon(location.type)}
+                              {/* 添加天数标识 */}
+                              <div 
+                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                                style={{ backgroundColor: dayColor }}
+                              >
+                                {day}
+                              </div>
+                            </div>
+                          </Marker>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* 原有的标记点渲染（兼容性） */}
                   {enhancedLocations
-                    .filter(location => location.resolvedCoordinates)
+                    .filter(location => location.resolvedCoordinates && !location.day)
                     .map((location, index) => {
                       console.log(`渲染Marker ${index}:`, location.name, location.resolvedCoordinates);
 
@@ -199,7 +294,6 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
                       return (
                         <Marker
                           key={`marker-${index}`}
-                          // offset={new AMap.Pixel(-12, -12)}
                           position={position as any}
                         >
                           {getTypeIcon(location.type)}
@@ -208,6 +302,8 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
                     })}
                 </Map>
               </APILoader>
+
+
 
               {/* API密钥提示 */}
               {(!process.env.NEXT_PUBLIC_AMAP_KEY || process.env.NEXT_PUBLIC_AMAP_KEY === 'placeholder_key_for_react_amap') && (
@@ -218,6 +314,8 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
             </div>
           )}
         </div>
+
+
 
         {/* Location list */}
         <div className="space-y-2">
@@ -269,28 +367,55 @@ export function TravelMap({ locations, destination }: TravelMapProps) {
               <MapPin className="h-4 w-4" />
               <span className="font-medium">图例</span>
             </div>
-            <div className="flex items-center justify-around text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
-                  景
+            <div className="space-y-3">
+              {/* 地点类型图例 */}
+              <div className="flex items-center justify-around text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
+                    景
+                  </div>
+                  <span className="text-muted-foreground">景点</span>
                 </div>
-                <span className="text-muted-foreground">景点</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xs">
-                  餐
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xs">
+                    餐
+                  </div>
+                  <span className="text-muted-foreground">餐厅</span>
                 </div>
-                <span className="text-muted-foreground">餐厅</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xs">
-                  住
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xs">
+                    住
+                  </div>
+                  <span className="text-muted-foreground">酒店</span>
                 </div>
-                <span className="text-muted-foreground">酒店</span>
               </div>
+              
+              {/* 路线颜色图例 */}
+              {Object.keys(getLocationsByDay()).length > 0 && (
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="text-xs text-muted-foreground mb-2 text-center">路线颜色</div>
+                  <div className="flex items-center justify-around">
+                    {Object.keys(getLocationsByDay()).slice(0, 4).map((dayStr, index) => {
+                      const day = parseInt(dayStr);
+                      const dayColor = dayColors[index % dayColors.length];
+                      return (
+                        <div key={day} className="flex items-center gap-1">
+                          <div 
+                            className="w-3 h-2 rounded-full"
+                            style={{ backgroundColor: dayColor }}
+                          />
+                          <span className="text-xs text-muted-foreground">第{day}天</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
+
+        
 
         {/* 地图统计 */}
         {enhancedLocations.length > 0 && (
