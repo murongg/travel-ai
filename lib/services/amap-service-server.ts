@@ -144,7 +144,7 @@ interface AmapGeocode {
 
 export interface LocationResult {
   address: string;
-  coordinates: [number, number]; // [lng, lat]
+  coordinates: { lng: number; lat: number };
   city: string;
   district: string;
   formatted_address: string;
@@ -229,7 +229,7 @@ export class AmapServiceServer {
 
           return {
             address: address,
-            coordinates: [lng, lat],
+            coordinates: { lng, lat },
             city: geocode.city,
             district: geocode.district,
             formatted_address: geocode.formatted_address,
@@ -267,7 +267,7 @@ export class AmapServiceServer {
    * @param cityName 城市名称
    * @returns 城市中心坐标
    */
-  async getCityCenter(cityName: string): Promise<[number, number] | null> {
+  async getCityCenter(cityName: string): Promise<{ lng: number; lat: number } | null> {
     try {
       // 标准化城市名称
       const normalizedCity = this.normalizeCityName(cityName);
@@ -776,7 +776,7 @@ export class AmapServiceServer {
    * @param cityCenter 城市中心坐标（可选，作为起点）
    * @returns 每日路径规划结果
    */
-  async planDailyRoute(dayPlan: any, cityCenter?: [number, number]): Promise<DailyRoutePlan | null> {
+  async planDailyRoute(dayPlan: any, cityCenter?: { lng: number; lat: number }): Promise<DailyRoutePlan | null> {
     try {
       // 提取所有需要访问的地点
       const locations: RouteWaypoint[] = [];
@@ -851,7 +851,7 @@ export class AmapServiceServer {
       locations.forEach((loc, index) => {
         const result = geocodingResults[index];
         if (result && result.coordinates) {
-          loc.location = `${result.coordinates[0]},${result.coordinates[1]}`;
+          loc.location = `${result.coordinates.lng},${result.coordinates.lat}`;
         }
       });
 
@@ -882,7 +882,7 @@ export class AmapServiceServer {
 
       if (cityCenter) {
         // 使用城市中心作为起点
-        origin = `${cityCenter[0]},${cityCenter[1]}`;
+        origin = `${cityCenter.lng},${cityCenter.lat}`;
         destination = validLocations[validLocations.length - 1].location;
         waypoints = validLocations.slice(0, -1).map(loc => loc.location);
       } else {
@@ -992,7 +992,7 @@ export class AmapServiceServer {
    * @param cityCenter 城市中心坐标
    * @returns 每日路径规划结果数组
    */
-  async planMultiDayRoutes(itinerary: any[], cityCenter?: [number, number]): Promise<DailyRoutePlan[]> {
+  async planMultiDayRoutes(itinerary: any[], cityCenter?: { lng: number; lat: number }): Promise<DailyRoutePlan[]> {
     try {
       const dailyRoutes: DailyRoutePlan[] = [];
       

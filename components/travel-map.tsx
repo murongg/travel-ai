@@ -27,26 +27,26 @@ interface MapLocation {
   type: "attraction" | "restaurant" | "hotel"
   day: number
   description?: string
-  coordinates?: [number, number] // [lng, lat]
+  coordinates?: { lng: number; lat: number }
 }
 
 interface TravelMapProps {
   locations: MapLocation[]
   destination: string
-  dailyLocations: Array<{ day: number; locations: (Activity | Meal)[] }>
 }
 
 interface EnhancedMapLocation extends MapLocation {
-  resolvedCoordinates?: [number, number];
+  resolvedCoordinates?: { lng: number; lat: number };
   geocodingStatus?: 'pending' | 'success' | 'failed';
 }
 
-export function TravelMap({ locations, destination, dailyLocations }: TravelMapProps) {
+export function TravelMap({ locations, destination }: TravelMapProps) {
   const [enhancedLocations, setEnhancedLocations] = useState<EnhancedMapLocation[]>([]);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([116.397428, 39.90923]);
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number }>({ lng: 116.397428, lat: 39.90923 });
   const [mapZoom, setMapZoom] = useState<number>(12);
   const [isGeocoding, setIsGeocoding] = useState(true);
-  
+  const [mapLoaded, setMapLoaded] = useState(false);
+
   // 为每天分配不同的颜色
   const dayColors = [
     '#3366FF', // 蓝色 - 第1天
@@ -61,7 +61,7 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
     '#DDA0DD'  // 紫色 - 第10天
   ];
 
-  // 生成每天的行程描述
+    // 生成每天的行程描述
   const generateDayDescription = (day: number, locations: Activity[]) => {
     if (!locations || locations.length === 0) {
       return `第${day}天: 待安排`;
@@ -71,19 +71,66 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
     return `第${day}天: ${locationNames}`;
   };
 
+  // 坐标转换函数：统一处理各种坐标格式
+  const convertCoordinates = (coordinates: any): { lng: number; lat: number } | null => {
+    if (!coordinates) return null;
+    
+    // 如果是数组格式 [lng, lat]
+    if (Array.isArray(coordinates) && coordinates.length === 2) {
+      return { lng: coordinates[0], lat: coordinates[1] };
+    }
+    
+    // 如果是对象格式 {lng, lat}
+    if (typeof coordinates === 'object' && 'lng' in coordinates && 'lat' in coordinates) {
+      return { lng: coordinates.lng, lat: coordinates.lat };
+    }
+    
+    // 如果是对象格式 {lat, lng}（错误格式）
+    if (typeof coordinates === 'object' && 'lat' in coordinates && 'lng' in coordinates) {
+      return { lng: coordinates.lng, lat: coordinates.lat };
+    }
+    
+    return null;
+  };
+
   // 按天分组地点
   const getLocationsByDay = () => {
     const dayGroups: { [key: number]: MapLocation[] } = {};
-    
+
+    console.log('getLocationsByDay 输入数据:', {
+      totalLocations: locations.length,
+      locations: locations.map(loc => ({
+        name: loc.name,
+        day: loc.day,
+        hasCoordinates: !!loc.coordinates,
+        coordinates: loc.coordinates,
+        type: loc.type
+      }))
+    });
+
     locations.forEach(location => {
       if (location.day && location.coordinates) {
         if (!dayGroups[location.day]) {
           dayGroups[location.day] = [];
         }
-        dayGroups[location.day].push(location);
+        // 统一转换坐标格式
+        const convertedCoords = convertCoordinates(location.coordinates);
+        if (convertedCoords) {
+          dayGroups[location.day].push({
+            ...location,
+            coordinates: convertedCoords
+          });
+        }
       }
     });
-    
+
+    console.log('getLocationsByDay 输出结果:', dayGroups);
+    console.log('按天分组统计:', Object.entries(dayGroups).map(([day, locs]) => ({
+      day: parseInt(day),
+      count: locs.length,
+      hasCoordinates: locs.every(loc => !!loc.coordinates)
+    })));
+
     return dayGroups;
   };
 
@@ -144,8 +191,12 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
       try {
         // 1. 计算地图中心点坐标
         let centerCoordinates = mapCenter;
-        const locationsWithCoords = locations.filter(loc => loc.coordinates);
-
+        const locationsWithCoords = locations.filter(loc => 
+          loc.coordinates && 
+          Array.isArray(loc.coordinates) && 
+          loc.coordinates.length === 2
+        );
+        console.log('locations', locations)
         // 直接获取目标城市的中心坐标作为地图中心
         const cityCenter = await amapService.getCityCenter(destination);
         if (cityCenter) {
@@ -172,14 +223,21 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
         }
 
         // 更新地图中心点
-        setMapCenter(centerCoordinates);
+        if (centerCoordinates && typeof centerCoordinates === 'object' && 'lng' in centerCoordinates && 'lat' in centerCoordinates) {
+          setMapCenter({ lng: centerCoordinates.lng, lat: centerCoordinates.lat });
+        }
 
         // 2. 直接使用AI提供的坐标
-        const enhanced: EnhancedMapLocation[] = locations.map(location => ({
-          ...location,
-          geocodingStatus: location.coordinates ? 'success' : 'failed' as const,
-          resolvedCoordinates: location.coordinates
-        }));
+        const enhanced: EnhancedMapLocation[] = locations
+          .map(location => {
+            const convertedCoords = location.coordinates ? convertCoordinates(location.coordinates) : null;
+            return {
+              ...location,
+              geocodingStatus: (convertedCoords ? 'success' : 'failed') as 'success' | 'failed',
+              resolvedCoordinates: convertedCoords || undefined
+            };
+          })
+          .filter(location => location.resolvedCoordinates !== undefined);
 
         setEnhancedLocations(enhanced);
 
@@ -223,64 +281,99 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
             <div className="relative h-full">
               <APILoader akey={process.env.NEXT_PUBLIC_AMAP_KEY || 'placeholder_key_for_react_amap'}>
                 <Map style={{ height: '100%' }}
-                  center={mapCenter as any}
+                  center={[mapCenter.lng, mapCenter.lat] as any}
                   zoom={mapZoom}
+                  onComplete={() => {
+                    console.log('地图加载完成');
+                    setMapLoaded(true);
+                  }}
                 >
                   {/* 渲染每天的路线 */}
-                  {Object.entries(getLocationsByDay()).map(([dayStr, dayLocations], dayIndex) => {
-                    const day = parseInt(dayStr);
-                    const dayColor = dayColors[dayIndex % dayColors.length];
-                    const path = dayLocations.map(loc => loc.coordinates!);
-                    
-                    return (
-                      <div key={`day-${day}`}>
-                        {/* 绘制路线 */}
-                        {path.length > 1 && (
-                          <Polyline
-                            path={path as any}
-                            strokeColor={dayColor}
-                            strokeWeight={5}
-                            strokeStyle="solid"
-                            strokeOpacity={0.9}
-                            zIndex={50}
-                          />
-                        )}
-                        
-                        {/* 渲染当天的标记点 */}
-                        {dayLocations.map((location, index) => (
-                          <Marker
-                            key={`day-${day}-marker-${index}`}
-                            position={location.coordinates as any}
-                          >
-                            <div className="relative">
-                              {getTypeIcon(location.type)}
-                              {/* 添加天数标识 */}
-                              <div 
-                                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-xs font-bold flex items-center justify-center"
-                                style={{ backgroundColor: dayColor }}
+                  {mapLoaded && Object.entries(getLocationsByDay()).map(([dayStr, dayLocations], dayIndex) => {
+                    try {
+                      const day = parseInt(dayStr);
+                      const dayColor = dayColors[dayIndex % dayColors.length];
+                      
+                      // 过滤有效的坐标数据
+                      const validLocations = dayLocations.filter(loc => 
+                        loc.coordinates && 
+                        typeof loc.coordinates === 'object' &&
+                        'lng' in loc.coordinates && 
+                        'lat' in loc.coordinates &&
+                        typeof loc.coordinates.lng === 'number' && 
+                        typeof loc.coordinates.lat === 'number'
+                      );
+                      
+                      // 创建路径：高德地图期望 [lng, lat] 数组格式
+                      const path = validLocations.map(loc => [loc.coordinates!.lng, loc.coordinates!.lat] as [number, number]);
+                      
+                      console.log(`第${day}天数据:`, {
+                        total: dayLocations.length,
+                        valid: validLocations.length,
+                        path: path
+                      });
+
+                      return (
+                        <div key={`day-${day}`}>
+                          {/* 绘制路线 */}
+                          {path.length > 1 && (
+                            <Polyline
+                              path={path as any}
+                              strokeColor={dayColor}
+                              strokeWeight={5}
+                              strokeStyle="solid"
+                              strokeOpacity={0.9}
+                              zIndex={50}
+                            />
+                          )}
+
+                          {/* 渲染当天的标记点 */}
+                          {validLocations.map((location, index) => {
+                            console.log(`渲染Marker day-${day}-${index}:`, {
+                              name: location.name,
+                              coordinates: location.coordinates,
+                              type: location.type
+                            });
+                            
+                            return (
+                              <Marker
+                                key={`day-${day}-${index}`}
+                                position={[location.coordinates!.lng, location.coordinates!.lat] as any}
                               >
-                                {day}
-                              </div>
-                            </div>
-                          </Marker>
-                        ))}
-                      </div>
-                    );
+                                <div className="relative">
+                                  {getTypeIcon(location.type)}
+                                  {/* 添加天数标识 */}
+                                  <div
+                                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                                    style={{ backgroundColor: dayColor }}
+                                  >
+                                    {day}
+                                  </div>
+                                </div>
+                              </Marker>
+                            );
+                          })}
+                        </div>
+                      );
+                    } catch (error) {
+                      console.error(`渲染第${dayStr}天路线时出错:`, error);
+                      return null;
+                    }
                   })}
-                  
+
                   {/* 原有的标记点渲染（兼容性） */}
-                  {enhancedLocations
+                  {mapLoaded && enhancedLocations
                     .filter(location => location.resolvedCoordinates && !location.day)
                     .map((location, index) => {
                       console.log(`渲染Marker ${index}:`, location.name, location.resolvedCoordinates);
 
                       // 确保坐标格式正确
-                      if (!location.resolvedCoordinates || !Array.isArray(location.resolvedCoordinates) || location.resolvedCoordinates.length !== 2) {
+                      if (!location.resolvedCoordinates || typeof location.resolvedCoordinates !== 'object' || !('lng' in location.resolvedCoordinates) || !('lat' in location.resolvedCoordinates)) {
                         console.warn(`无效的坐标数据 ${index}:`, location.resolvedCoordinates);
                         return null;
                       }
 
-                      const position: [number, number] = [location.resolvedCoordinates[0], location.resolvedCoordinates[1]];
+                      const position: [number, number] = [location.resolvedCoordinates.lng, location.resolvedCoordinates.lat];
                       console.log(`Marker位置 ${index}:`, position);
 
                       return (
@@ -292,6 +385,7 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
                         </Marker>
                       );
                     })}
+
                 </Map>
               </APILoader>
 
@@ -306,7 +400,6 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
             </div>
           )}
         </div>
-
 
 
         {/* Location list */}
@@ -333,9 +426,11 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
                   {location.description && (
                     <p className="text-xs text-muted-foreground mt-1">{location.description}</p>
                   )}
-                  {location.resolvedCoordinates && (
+                  {location.resolvedCoordinates && 
+                   typeof location.resolvedCoordinates.lng === 'number' && 
+                   typeof location.resolvedCoordinates.lat === 'number' && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      坐标: {location.resolvedCoordinates[0].toFixed(6)}, {location.resolvedCoordinates[1].toFixed(6)}
+                      坐标: {location.resolvedCoordinates.lng.toFixed(6)}, {location.resolvedCoordinates.lat.toFixed(6)}
                     </p>
                   )}
                 </div>
@@ -381,7 +476,7 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
                   <span className="text-muted-foreground">酒店</span>
                 </div>
               </div>
-              
+
               {/* 路线颜色图例 */}
               {Object.keys(getLocationsByDay()).length > 0 && (
                 <div className="pt-2 border-t border-gray-200">
@@ -392,7 +487,7 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
                       const dayColor = dayColors[index % dayColors.length];
                       return (
                         <div key={day} className="flex items-center gap-1">
-                          <div 
+                          <div
                             className="w-3 h-2 rounded-full"
                             style={{ backgroundColor: dayColor }}
                           />
@@ -407,7 +502,7 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
           </div>
         )}
 
-        
+
 
         {/* 地图统计 */}
         {enhancedLocations.length > 0 && (
@@ -430,8 +525,12 @@ export function TravelMap({ locations, destination, dailyLocations }: TravelMapP
                 <span>{enhancedLocations.length} 个</span>
               </div>
               <div className="flex justify-between">
+                <span>按天分组:</span>
+                <span>{Object.keys(getLocationsByDay()).length} 天</span>
+              </div>
+              <div className="flex justify-between">
                 <span>城市中心:</span>
-                <span>{mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}</span>
+                <span>{mapCenter.lng.toFixed(4)}, {mapCenter.lat.toFixed(4)}</span>
               </div>
               <div className="flex justify-between">
                 <span>缩放级别:</span>

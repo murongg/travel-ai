@@ -26,17 +26,10 @@ export default function ResultPage() {
   // 使用AI生成的重要地点数据
   const map_locations = useMemo(() => {
     if (!guide) return [];
-
-    // 优先使用AI生成的mapLocations
-    if (guide.map_locations && guide.map_locations.length > 0) {
-      return guide.map_locations.map(location => ({
-        ...location,
-        day: location.day || 1 // 确保day有默认值
-      }));
-    }
+  
 
     // 如果没有AI生成的地点，回退到从行程中提取
-    const locations: Array<{ name: string; type: "attraction" | "restaurant" | "hotel"; day: number }> = [];
+    const locations: Array<{ name: string; coordinates?: { lng: number; lat: number }; type: "attraction" | "restaurant" | "hotel"; day: number }> = [];
 
     guide.itinerary.forEach((dayPlan, index) => {
       const dayNumber = dayPlan.day || (index + 1);
@@ -47,7 +40,8 @@ export default function ResultPage() {
           locations.push({
             name: activity.name,
             type: "attraction",
-            day: dayNumber
+            day: dayNumber,
+            coordinates: activity.coordinates
           });
         }
       });
@@ -59,7 +53,7 @@ export default function ResultPage() {
           locations.push({
             name: meal.name,
             type: "restaurant",
-            day: dayNumber
+            day: dayNumber,
           });
         }
       });
@@ -68,24 +62,6 @@ export default function ResultPage() {
 
     return locations;
   }, [guide])
-
-  const dailyLocations = useMemo(() => {
-    if (!guide) return [];
-    return [
-      ...guide.itinerary.map(dayPlan => ({
-        day: dayPlan.day,
-        locations: [
-          ...dayPlan.activities,
-          ...dayPlan.meals,
-        ]
-      })),
-    ];
-  }, [guide])
-
-  useEffect(() => {
-    console.log('dailyLocations', dailyLocations)
-  }, [dailyLocations])
-
   useEffect(() => {
     const guideId = searchParams.get("guideId")
     setIsLoading(true);
@@ -407,7 +383,6 @@ export default function ResultPage() {
                 <TravelMap
                   locations={map_locations}
                   destination={guide.destination}
-                  dailyLocations={dailyLocations}
                 />
               </div>
 

@@ -45,7 +45,10 @@ const ItinerarySchema = z.object({
       description: z.string(),
       duration: z.string(),
       cost: z.string(),
-      coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+      coordinates: z.object({
+        lng: z.number(),
+        lat: z.number()
+      }).optional(), // {lng: 经度, lat: 纬度}
       formattedAddress: z.string().optional(),
       city: z.string().optional(),
       district: z.string().optional(),
@@ -65,7 +68,10 @@ const ItinerarySchema = z.object({
       location: z.string(),
       cost: z.string(),
       description: z.string(),
-      coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+      coordinates: z.object({
+        lng: z.number(),
+        lat: z.number()
+      }).optional(), // {lng: 经度, lat: 纬度}
       formattedAddress: z.string().optional(),
       city: z.string().optional(),
       district: z.string().optional(),
@@ -88,7 +94,10 @@ const LocationsSchema = z.object({
     type: z.enum(["attraction", "restaurant", "hotel"]),
     description: z.string().max(40),
     day: z.number(),
-    coordinates: z.array(z.number()).optional(), // [经度, 纬度]
+    coordinates: z.object({
+      lng: z.number(),
+      lat: z.number()
+    }).optional(), // {lng: 经度, lat: 纬度}
     formattedAddress: z.string().optional(),
     city: z.string().optional(),
     district: z.string().optional()
@@ -425,7 +434,6 @@ export class LangChainTravelAgent {
       openAIApiKey: apiKey,
       modelName: "gpt-4o-mini",
       temperature: 0.7,
-      maxTokens: 4000,
     });
 
     console.log('LangChainTravelAgent initialized with OpenAI capabilities');
@@ -673,6 +681,7 @@ export class LangChainTravelAgent {
 - 每天3-4个活动，3餐
 - 根据{transportationMode}规划交通
 - 名称<12字，描述<25字
+- 坐标格式：{{"lng": 经度数值, "lat": 纬度数值}}，不要使用数组格式
 - 只返回JSON，无其他文字
 `);
 
@@ -719,7 +728,10 @@ export class LangChainTravelAgent {
 - 推荐餐厅(restaurant)：2-3个精选美食  
 - 住宿推荐(hotel)：1-2个优质选择
 
-注意：只需要提供地点名称，坐标将自动获取。只返回JSON格式，确保专业性和准确性。
+注意：
+- 只需要提供地点名称，坐标将自动获取
+- 如果提供坐标，请使用格式：{{"lng": 经度数值, "lat": 纬度数值}}
+- 只返回JSON格式，确保专业性和准确性
 `);
 
     const chain = RunnableSequence.from([
@@ -974,12 +986,16 @@ export class LangChainTravelAgent {
       if (!location.coordinates) {
         try {
           const result = await amapServiceServer.smartGeocode(location.name, destination);
-          if (result && result.coordinates) {
-            enrichedLocation.coordinates = result.coordinates;
-            console.log(`成功获取 ${location.name} 的坐标:`, result.coordinates);
-          } else {
-            console.warn(`无法获取 ${location.name} 的坐标`);
-          }
+                  if (result && result.coordinates) {
+          // 确保坐标格式正确：{lng, lat}
+          enrichedLocation.coordinates = {
+            lng: result.coordinates.lng,
+            lat: result.coordinates.lat
+          };
+          console.log(`成功获取 ${location.name} 的坐标:`, enrichedLocation.coordinates);
+        } else {
+          console.warn(`无法获取 ${location.name} 的坐标`);
+        }
         } catch (error) {
           console.error(`获取 ${location.name} 坐标失败:`, error);
         }
@@ -1011,11 +1027,15 @@ export class LangChainTravelAgent {
                 console.log(`📍 正在获取活动地点坐标: ${activity.location}`);
                 const result = await amapServiceServer.smartGeocode(activity.location, destination);
                 if (result && result.coordinates) {
-                  enrichedActivity.coordinates = result.coordinates;
+                  // 确保坐标格式正确：{lng, lat}
+                  enrichedActivity.coordinates = {
+                    lng: result.coordinates.lng,
+                    lat: result.coordinates.lat
+                  };
                   enrichedActivity.formattedAddress = result.formatted_address;
                   enrichedActivity.city = result.city;
                   enrichedActivity.district = result.district;
-                  console.log(`✅ 成功获取 ${activity.location} 的坐标:`, result.coordinates);
+                  console.log(`✅ 成功获取 ${activity.location} 的坐标:`, enrichedActivity.coordinates);
                 } else {
                   console.warn(`⚠️ 无法获取 ${activity.location} 的坐标`);
                   enrichedActivity.coordinates = null;
@@ -1042,11 +1062,15 @@ export class LangChainTravelAgent {
                 console.log(`📍 正在获取餐厅坐标: ${meal.location}`);
                 const result = await amapServiceServer.smartGeocode(meal.location, destination);
                 if (result && result.coordinates) {
-                  enrichedMeal.coordinates = result.coordinates;
+                  // 确保坐标格式正确：{lng, lat}
+                  enrichedMeal.coordinates = {
+                    lng: result.coordinates.lng,
+                    lat: result.coordinates.lat
+                  };
                   enrichedMeal.formattedAddress = result.formatted_address;
                   enrichedMeal.city = result.city;
                   enrichedMeal.district = result.district;
-                  console.log(`✅ 成功获取 ${meal.location} 的坐标:`, result.coordinates);
+                  console.log(`✅ 成功获取 ${meal.location} 的坐标:`, enrichedMeal.coordinates);
                 } else {
                   console.warn(`⚠️ 无法获取 ${meal.location} 的坐标`);
                   enrichedMeal.coordinates = null;

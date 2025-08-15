@@ -388,6 +388,7 @@ export class XiaoHongShu {
   public apiKey = process.env.TIKHUB_API_KEY || ''
 
   public async getNotesByKeyword(keyword: string) {
+    console.log(`request keyword: ${keyword}`)
     const response = await fetch(`${this.baseUrl}/api/v1/xiaohongshu/app/search_notes?keyword=${keyword}&page=1&filter_note_type=普通笔记`, {
       headers: {
         // bearer token
@@ -395,13 +396,46 @@ export class XiaoHongShu {
       }
     })
     const data = await response.json() as TikHubNotes
-    // 随机选择5条笔记
-    const randomNotes = data.data.data.items.sort(() => Math.random() - 0.5).slice(0, 5)
-    // 获取5条笔记的noteId
-    const noteIds = randomNotes.map(item => item.note?.id)
-    // 获取5条笔记的desc
-    const notes = await Promise.all(noteIds.map(noteId => this.getNotesByNoteId(noteId)))
-    return notes.map(note => note.content)
+    
+    // 先过滤有效的笔记项目
+    const validItems = data.data.data.items.filter(item => item.note?.id)
+    console.log(`找到 ${validItems.length} 个有效笔记项目`)
+    
+    if (validItems.length === 0) {
+      console.warn('没有找到有效的笔记项目')
+      return []
+    }
+    
+    // 随机选择5条笔记（如果总数少于5条，则全部选择）
+    const selectCount = Math.min(5, validItems.length)
+    const randomNotes = this.shuffleArray(validItems).slice(0, selectCount)
+    
+    console.log(`随机选择了 ${randomNotes.length} 条笔记`)
+    
+    // 获取笔记内容
+    const notes = await Promise.allSettled(
+      randomNotes.map((item: any) => this.getNotesByNoteId(item.note?.id))
+    )
+    
+    // 过滤成功获取的内容
+    const validNotes = notes
+      .map((note: any) => note.status === 'fulfilled' ? note.value.content : '')
+      .filter((note: string) => note !== '')
+    
+    console.log(`成功获取 ${validNotes.length} 条笔记内容`)
+    return validNotes
+  }
+
+  /**
+   * Fisher-Yates 洗牌算法，实现真正的随机选择
+   */
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
   }
 
   public async getNotesByNoteId(noteId: string | number) {

@@ -35,7 +35,7 @@ interface AmapGeocode {
 
 export interface LocationResult {
   address: string;
-  coordinates: [number, number]; // [lng, lat]
+  coordinates: { lng: number; lat: number };
   city: string;
   district: string;
   formatted_address: string;
@@ -126,7 +126,7 @@ export class AmapService {
    * @param cityName 城市名称
    * @returns 城市中心坐标
    */
-  async getCityCenter(cityName: string): Promise<[number, number] | null> {
+  async getCityCenter(cityName: string): Promise<{ lng: number; lat: number } | null> {
     const result = await this.geocoding(cityName);
     return result ? result.coordinates : null;
   }
@@ -192,16 +192,16 @@ export class AmapService {
 export const amapService = new AmapService();
 
 // 工具函数
-export const formatCoordinates = (coordinates: [number, number]): string => {
-  return `${coordinates[0]}, ${coordinates[1]}`;
+export const formatCoordinates = (coordinates: { lng: number; lat: number }): string => {
+  return `${coordinates.lng}, ${coordinates.lat}`;
 };
 
 export const calculateDistance = (
-  coord1: [number, number], 
-  coord2: [number, number]
+  coord1: { lng: number; lat: number }, 
+  coord2: { lng: number; lat: number }
 ): number => {
-  const [lng1, lat1] = coord1;
-  const [lng2, lat2] = coord2;
+  const { lng: lng1, lat: lat1 } = coord1;
+  const { lng: lng2, lat: lat2 } = coord2;
   
   const radLat1 = (lat1 * Math.PI) / 180;
   const radLat2 = (lat2 * Math.PI) / 180;
